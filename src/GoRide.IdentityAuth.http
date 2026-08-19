@@ -1,0 +1,6 @@
+@GoRide.IdentityAuth_HostAddress = http://localhost:5039
+
+GET {{GoRide.IdentityAuth_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
