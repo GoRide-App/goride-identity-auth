@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
+using SRC;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,6 +60,15 @@ builder.Services.AddAuthentication(options =>
 
     options.TokenValidationParameters.NameClaimType = "name";
     options.TokenValidationParameters.RoleClaimType = "roles"; // Asgardeo's claim name — without this, [Authorize(Roles=...)] never matches
+
+    options.Events.OnRedirectToIdentityProvider = context =>
+    {
+        if (context.Properties.Items.TryGetValue("forceFresh", out var forceFresh) && forceFresh == "true")
+        {
+            context.ProtocolMessage.Prompt = "login";
+        }
+        return Task.CompletedTask;
+    };
 });
 
 builder.Services.AddAuthorization(options =>
@@ -86,6 +96,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
+ServiceExtentions.AddApplicationServices(builder.Services);
 
 //==============================================================================================================================
 var app = builder.Build();
@@ -98,10 +109,19 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 
-app.MapGet("/login", (string? returnUrl) =>
-    Results.Challenge(
-        new AuthenticationProperties { RedirectUri = returnUrl ?? "http://localhost:3000" },
-        [OpenIdConnectDefaults.AuthenticationScheme])).AllowAnonymous();
+// app.MapGet("/login", (string? returnUrl) =>
+//     Results.Challenge(
+//         new AuthenticationProperties { RedirectUri = returnUrl ?? "http://localhost:3000" },
+//         [OpenIdConnectDefaults.AuthenticationScheme])).AllowAnonymous();
+app.MapGet("/login", (string? returnUrl, string? prompt) =>
+{
+    var properties = new AuthenticationProperties { RedirectUri = returnUrl ?? "http://localhost:3000" };
+    if (prompt == "login")
+    {
+        properties.Items["forceFresh"] = "true";
+    }
+    return Results.Challenge(properties, [OpenIdConnectDefaults.AuthenticationScheme]);
+}).AllowAnonymous();
 
 if (app.Environment.IsDevelopment())
 {
@@ -117,12 +137,25 @@ app.MapGet("/logout", () =>
 
 app.MapGet("/api/me", (ClaimsPrincipal user) =>
 {
+    // if (!user.Identity!.IsAuthenticated) return Results.Unauthorized();
+    // return Results.Ok(new
+    // {
+    //     name = user.FindFirstValue("name"),
+    //     email = user.FindFirstValue("email"),
+    //     roles = user.FindAll("roles").Select(c => c.Value)
+    // });
     if (!user.Identity!.IsAuthenticated) return Results.Unauthorized();
+
+    // Temporary - shows exactly what claims are actually present right now.
+    // Remove once the real bug is found.
+    var allClaims = user.Claims.Select(c => new { c.Type, c.Value }).ToList();
+
     return Results.Ok(new
     {
         name = user.FindFirstValue("name"),
         email = user.FindFirstValue("email"),
-        roles = user.FindAll("roles").Select(c => c.Value)
+        roles = user.FindAll("roles").Select(c => c.Value),
+        allClaims
     });
 }).RequireAuthorization();
 
