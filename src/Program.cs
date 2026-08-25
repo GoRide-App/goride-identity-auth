@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -34,6 +35,55 @@ builder.Services.AddAuthentication(options =>
         context.Response.StatusCode = StatusCodes.Status403Forbidden;
         return Task.CompletedTask;
     };
+
+
+
+    options.Events.OnValidatePrincipal = async context =>
+    {
+        var expiresAt = context.Properties.GetTokens()
+            .FirstOrDefault(t => t.Name == "expires_at")?.Value;
+
+        if (expiresAt is null || DateTimeOffset.Parse(expiresAt) > DateTimeOffset.UtcNow.AddMinutes(2))
+            return; // token still valid, nothing to do
+
+        var refreshToken = context.Properties.GetTokens()
+            .FirstOrDefault(t => t.Name == "refresh_token")?.Value;
+
+        if (refreshToken is null)
+        {
+            context.RejectPrincipal(); // no refresh token — force re-login
+            return;
+        }
+
+        var config = context.HttpContext.RequestServices.GetRequiredService<IConfiguration>();
+        var http = context.HttpContext.RequestServices.GetRequiredService<IHttpClientFactory>().CreateClient();
+
+        var response = await http.PostAsync(
+            "https://api.asgardeo.io/t/goride/oauth2/token",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["grant_type"] = "refresh_token",
+                ["refresh_token"] = refreshToken,
+                ["client_id"] = config["Asgardeo:ClientId"]!,
+                ["client_secret"] = config["Asgardeo:ClientSecret"]!
+            }));
+
+        if (!response.IsSuccessStatusCode)
+        {
+            context.RejectPrincipal(); // refresh failed — force re-login
+            return;
+        }
+
+        var tokens = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+        // Important: WSO2 rotates refresh tokens — always persist the NEW one
+        context.Properties.UpdateTokenValue("access_token", tokens.GetProperty("access_token").GetString()!);
+        context.Properties.UpdateTokenValue("refresh_token", tokens.GetProperty("refresh_token").GetString()!);
+        context.Properties.UpdateTokenValue("expires_at",
+            DateTimeOffset.UtcNow.AddSeconds(tokens.GetProperty("expires_in").GetInt32()).ToString("o"));
+
+        context.ShouldRenew = true; // re-issues the cookie with updated properties
+    };
 })
 .AddOpenIdConnect(options =>
 {
@@ -51,6 +101,7 @@ builder.Services.AddAuthentication(options =>
     options.Scope.Add("email");
     options.Scope.Add("profile");
     options.Scope.Add("roles");
+    options.Scope.Add("offline_access");
 
     options.CallbackPath = "/signin-oidc"; // must exactly match what you registered in Step 1
     options.SignedOutCallbackPath = "/signout-callback-oidc";
