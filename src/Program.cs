@@ -102,6 +102,7 @@ builder.Services.AddAuthentication(options =>
     options.Scope.Add("profile");
     options.Scope.Add("roles");
     options.Scope.Add("offline_access");
+    options.Scope.Add("internal_login");
 
     options.CallbackPath = "/signin-oidc"; // must exactly match what you registered in Step 1
     options.SignedOutCallbackPath = "/signout-callback-oidc";
