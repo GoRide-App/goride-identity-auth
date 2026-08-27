@@ -28,14 +28,31 @@ per ticket.
 ## Getting a session
 
 The API authenticates with an **HttpOnly session cookie**, not a bearer token,
-so Postman cannot perform the login itself. Do it once in a browser:
+so Postman cannot perform the login itself. Do it once in a browser.
+
+The session carries the access token, refresh token and ID token, which pushes
+it past the 4KB cookie limit. ASP.NET Core therefore splits it into three
+cookies — `app_session` (holding only the text `chunks:2`), `app_sessionC1` and
+`app_sessionC2`. **All three have to be sent together**, so copy the whole
+`Cookie` header rather than a single cookie value:
 
 1. Open <https://localhost:7136/login> in Chrome and sign in.
-2. `F12` → **Application** → **Cookies** → `https://localhost:7136`.
-3. Copy the **value** of the `app_session` cookie.
-4. Paste it into the `sessionCookie` environment variable.
+2. Go to <https://localhost:7136/api/me> — you should see your own details.
+3. Press `F12`, open the **Network** tab, and reload the page.
+4. Click the `me` request → **Headers** → **Request Headers** → `Cookie`.
+5. Copy the entire value. It looks like:
 
-The cookie is valid for 8 hours. When requests start returning 401, repeat.
+   ```
+   app_session=chunks:2; app_sessionC1=CfDJ8...; app_sessionC2=FbDM...
+   ```
+
+6. Paste it into the `sessionCookie` environment variable, in the
+   **Current value** column.
+
+The session is valid for 8 hours. When requests start returning 401, repeat.
+
+> Copying only `app_session` gives you the literal string `chunks:2`, and every
+> authenticated request returns 401.
 
 ## What each folder covers
 

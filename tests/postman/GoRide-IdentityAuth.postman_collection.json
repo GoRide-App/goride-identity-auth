@@ -2,7 +2,7 @@
   "info": {
     "name": "GoRide Identity & Auth - QA",
     "_postman_id": "9c1f5b62-3a44-4c7e-9c11-6b0d2f8a4e10",
-    "description": "QA test suite for the GoRide identity/auth service, organised one folder per SCRUM ticket.\n\n## Before you start\n\n1. Turn OFF SSL certificate verification: Settings > General > 'SSL certificate verification'. The API runs on the .NET dev certificate.\n2. Start the API with `dotnet run` from `src/` on the branch under test.\n3. Select the 'GoRide - Local' environment.\n\n## Getting the sessionCookie value\n\nThis API uses an HttpOnly session cookie, not a bearer token, so the login has to happen in a real browser first:\n\n1. Open `https://localhost:7136/login` in Chrome and sign in.\n2. Press F12 > Application > Cookies > `https://localhost:7136`.\n3. Copy the **value** of the `app_session` cookie.\n4. Paste it into the `sessionCookie` environment variable.\n\nThe cookie lasts 8 hours. If requests start returning 401, repeat these steps.\n\n## Branch coverage\n\nSCRUM-33 is a superset of SCRUM-30 and SCRUM-38, so running this whole collection against the SCRUM-33 branch exercises all three at once. SCRUM-31 is not implemented and its folder is expected to fail.",
+    "description": "QA test suite for the GoRide identity/auth service, organised one folder per SCRUM ticket.\n\n## Before you start\n\n1. Turn OFF SSL certificate verification: Settings > General > 'SSL certificate verification'. The API runs on the .NET dev certificate.\n2. Start the API with `dotnet run` from `src/` on the branch under test.\n3. Select the 'GoRide - Local' environment.\n\n## Getting the sessionCookie value\n\nThis API uses an HttpOnly session cookie, not a bearer token, so the login has to happen in a real browser first.\n\nThe session is too big for a single cookie, so ASP.NET Core splits it into `app_session` (which just holds the text `chunks:2`), `app_sessionC1` and `app_sessionC2`. **All three must be sent together**, so copy the whole Cookie header rather than one cookie value:\n\n1. Open `https://localhost:7136/login` in Chrome and sign in.\n2. Go to `https://localhost:7136/api/me` - you should see your own details.\n3. Press F12 and open the **Network** tab, then reload the page.\n4. Click the `me` request, and find **Request Headers** > `Cookie`.\n5. Copy the entire value. It looks like:\n   `app_session=chunks:2; app_sessionC1=CfDJ8...; app_sessionC2=FbDM...`\n6. Paste it into the `sessionCookie` environment variable (**Current value**, not Initial value).\n\nThe session lasts 8 hours. If requests start returning 401, repeat these steps.\n\n## Branch coverage\n\nSCRUM-33 is a superset of SCRUM-30 and SCRUM-38, so running this whole collection against the SCRUM-33 branch exercises all three at once. SCRUM-31 is not implemented and its folder is expected to fail.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -230,8 +230,8 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "app_session={{sessionCookie}}",
-                "description": "Session cookie copied from the browser after a real OIDC login."
+                "value": "{{sessionCookie}}",
+                "description": "The whole Cookie header copied from Chrome's Network tab. ASP.NET Core splits a large session across app_session, app_sessionC1 and app_sessionC2 - all parts must be sent together."
               }
             ],
             "url": {
@@ -270,8 +270,8 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "app_session={{sessionCookie}}",
-                "description": "Session cookie copied from the browser after a real OIDC login."
+                "value": "{{sessionCookie}}",
+                "description": "The whole Cookie header copied from Chrome's Network tab. ASP.NET Core splits a large session across app_session, app_sessionC1 and app_sessionC2 - all parts must be sent together."
               }
             ],
             "url": {
@@ -313,8 +313,8 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "app_session={{sessionCookie}}",
-                "description": "Session cookie copied from the browser after a real OIDC login."
+                "value": "{{sessionCookie}}",
+                "description": "The whole Cookie header copied from Chrome's Network tab. ASP.NET Core splits a large session across app_session, app_sessionC1 and app_sessionC2 - all parts must be sent together."
               }
             ],
             "url": {
@@ -360,8 +360,8 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "app_session={{sessionCookie}}",
-                "description": "Session cookie copied from the browser after a real OIDC login."
+                "value": "{{sessionCookie}}",
+                "description": "The whole Cookie header copied from Chrome's Network tab. ASP.NET Core splits a large session across app_session, app_sessionC1 and app_sessionC2 - all parts must be sent together."
               }
             ],
             "url": {
@@ -448,8 +448,8 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "app_session={{sessionCookie}}",
-                "description": "Session cookie copied from the browser after a real OIDC login."
+                "value": "{{sessionCookie}}",
+                "description": "The whole Cookie header copied from Chrome's Network tab. ASP.NET Core splits a large session across app_session, app_sessionC1 and app_sessionC2 - all parts must be sent together."
               }
             ],
             "url": {
@@ -798,8 +798,8 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "app_session={{sessionCookie}}",
-                "description": "Session cookie copied from the browser after a real OIDC login."
+                "value": "{{sessionCookie}}",
+                "description": "The whole Cookie header copied from Chrome's Network tab. ASP.NET Core splits a large session across app_session, app_sessionC1 and app_sessionC2 - all parts must be sent together."
               }
             ],
             "url": {
@@ -844,8 +844,8 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "app_session={{sessionCookie}}",
-                "description": "Session cookie copied from the browser after a real OIDC login."
+                "value": "{{sessionCookie}}",
+                "description": "The whole Cookie header copied from Chrome's Network tab. ASP.NET Core splits a large session across app_session, app_sessionC1 and app_sessionC2 - all parts must be sent together."
               }
             ],
             "url": {
@@ -889,8 +889,8 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "app_session={{sessionCookie}}",
-                "description": "Session cookie copied from the browser after a real OIDC login."
+                "value": "{{sessionCookie}}",
+                "description": "The whole Cookie header copied from Chrome's Network tab. ASP.NET Core splits a large session across app_session, app_sessionC1 and app_sessionC2 - all parts must be sent together."
               }
             ],
             "url": {
@@ -970,8 +970,8 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "app_session={{sessionCookie}}",
-                "description": "Session cookie copied from the browser after a real OIDC login."
+                "value": "{{sessionCookie}}",
+                "description": "The whole Cookie header copied from Chrome's Network tab. ASP.NET Core splits a large session across app_session, app_sessionC1 and app_sessionC2 - all parts must be sent together."
               }
             ],
             "url": {
@@ -1019,8 +1019,8 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "app_session={{sessionCookie}}",
-                "description": "Session cookie copied from the browser after a real OIDC login."
+                "value": "{{sessionCookie}}",
+                "description": "The whole Cookie header copied from Chrome's Network tab. ASP.NET Core splits a large session across app_session, app_sessionC1 and app_sessionC2 - all parts must be sent together."
               }
             ],
             "url": {
@@ -1069,8 +1069,8 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "app_session={{sessionCookie}}",
-                "description": "Session cookie copied from the browser after a real OIDC login."
+                "value": "{{sessionCookie}}",
+                "description": "The whole Cookie header copied from Chrome's Network tab. ASP.NET Core splits a large session across app_session, app_sessionC1 and app_sessionC2 - all parts must be sent together."
               }
             ],
             "url": {
@@ -1109,8 +1109,8 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "app_session={{sessionCookie}}",
-                "description": "Session cookie copied from the browser after a real OIDC login."
+                "value": "{{sessionCookie}}",
+                "description": "The whole Cookie header copied from Chrome's Network tab. ASP.NET Core splits a large session across app_session, app_sessionC1 and app_sessionC2 - all parts must be sent together."
               }
             ],
             "url": {
@@ -1123,7 +1123,7 @@
                 "me"
               ]
             },
-            "description": "Wait until the access token lifetime has elapsed before sending this. The rotated cookie is captured into {{sessionCookie}} automatically so later requests keep working."
+            "description": "Wait until the access token lifetime has elapsed before sending this. The refreshed session is written back as a NEW set of cookies. They are not captured automatically, because a large session is split into app_session / app_sessionC1 / app_sessionC2 and only re-copying the full header from Chrome is reliable."
           },
           "event": [
             {
@@ -1141,8 +1141,7 @@
                   "pm.test('Refreshed identity is still correct', function () {",
                   "    pm.expect(pm.response.json().email).to.be.a('string').and.include('@');",
                   "});",
-                  "const m = setCookie.match(/app_session=([^;]+)/);",
-                  "if (m) { pm.collectionVariables.set('sessionCookie', m[1]); console.log('Rotated cookie captured automatically.'); }"
+                  "console.warn('Session was refreshed, so the browser cookie has changed. If later requests start returning 401, re-copy the Cookie header from Chrome - see the collection description.');"
                 ]
               }
             }
@@ -1156,7 +1155,7 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "app_session={{sessionCookie}}TAMPERED"
+                "value": "{{sessionCookie}}TAMPERED"
               }
             ],
             "url": {
@@ -1193,8 +1192,8 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "app_session={{sessionCookie}}",
-                "description": "Session cookie copied from the browser after a real OIDC login."
+                "value": "{{sessionCookie}}",
+                "description": "The whole Cookie header copied from Chrome's Network tab. ASP.NET Core splits a large session across app_session, app_sessionC1 and app_sessionC2 - all parts must be sent together."
               }
             ],
             "url": {
@@ -1237,8 +1236,8 @@
             "header": [
               {
                 "key": "Cookie",
-                "value": "app_session={{sessionCookie}}",
-                "description": "Session cookie copied from the browser after a real OIDC login."
+                "value": "{{sessionCookie}}",
+                "description": "The whole Cookie header copied from Chrome's Network tab. ASP.NET Core splits a large session across app_session, app_sessionC1 and app_sessionC2 - all parts must be sent together."
               }
             ],
             "url": {
@@ -1274,11 +1273,11 @@
       "script": {
         "type": "text/javascript",
         "exec": [
-          "// Warn early if the session cookie has not been pasted in yet.",
-          "const usesCookie = (pm.request.headers.get('Cookie') || '').indexOf('app_session') !== -1;",
-          "const cookie = pm.collectionVariables.get('sessionCookie') || pm.environment.get('sessionCookie');",
-          "if (usesCookie && (!cookie || cookie === 'PASTE_APP_SESSION_COOKIE_VALUE_HERE')) {",
-          "    console.warn('sessionCookie is not set - authenticated requests will return 401. See the collection description.');",
+          "// Warn early if the Cookie header has not been pasted in yet.",
+          "const sendsCookie = pm.request.headers.has('Cookie');",
+          "const cookie = pm.environment.get('sessionCookie') || pm.collectionVariables.get('sessionCookie') || '';",
+          "if (sendsCookie && cookie.indexOf('app_session') === -1) {",
+          "    console.warn('sessionCookie does not contain an app_session value - authenticated requests will return 401. Copy the whole Cookie header from Chrome; see the collection description.');",
           "}"
         ]
       }
@@ -1302,7 +1301,7 @@
     },
     {
       "key": "sessionCookie",
-      "value": "PASTE_APP_SESSION_COOKIE_VALUE_HERE"
+      "value": "app_session=chunks:2; app_sessionC1=PASTE; app_sessionC2=PASTE"
     },
     {
       "key": "roleToSelect",
