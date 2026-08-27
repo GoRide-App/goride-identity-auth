@@ -103,6 +103,7 @@ builder.Services.AddAuthentication(options =>
     options.Scope.Add("roles");
     options.Scope.Add("offline_access");
     options.Scope.Add("internal_login");
+    options.Scope.Add("phone");
 
     options.CallbackPath = "/signin-oidc"; // must exactly match what you registered in Step 1
     options.SignedOutCallbackPath = "/signout-callback-oidc";
@@ -191,6 +192,7 @@ app.MapGet("/api/me", (ClaimsPrincipal user) =>
     {
         name = user.FindFirstValue("username"),
         email = user.FindFirstValue("email"),
+        phone_number = user.FindFirstValue("phone_number"),
         roles = user.FindAll("roles").Select(c => c.Value),
     });
 }).RequireAuthorization();
