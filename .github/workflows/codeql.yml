@@ -1,0 +1,45 @@
+name: CodeQL
+
+# Static analysis for real bugs and security issues (SQL injection, hardcoded
+# credentials, unsafe deserialisation, null dereferences). Free on public
+# repositories. Results land in the Security tab under "Code scanning".
+on:
+  pull_request:
+    branches: [main, dev]
+  push:
+    branches: [main, dev]
+  schedule:
+    # Weekly sweep of main, so newly published rules catch old code too.
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze C#
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: csharp
+          # `none` analyses the source directly without compiling it, which
+          # avoids CodeQL needing to reproduce the .NET 10 build.
+          build-mode: none
+          queries: security-and-quality
+
+      - name: Perform analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:csharp"

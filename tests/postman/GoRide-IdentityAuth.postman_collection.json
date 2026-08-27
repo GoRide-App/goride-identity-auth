@@ -1,0 +1,1364 @@
+{
+  "info": {
+    "name": "GoRide Identity & Auth - QA",
+    "_postman_id": "9c1f5b62-3a44-4c7e-9c11-6b0d2f8a4e10",
+    "description": "QA test suite for the GoRide identity/auth service, organised one folder per SCRUM ticket.\n\n## Before you start\n\n1. Turn OFF SSL certificate verification: Settings > General > 'SSL certificate verification'. The API runs on the .NET dev certificate.\n2. Start the API with `dotnet run` from `src/` on the branch under test.\n3. Select the 'GoRide - Local' environment.\n\n## Getting the sessionCookie value\n\nThis API uses an HttpOnly session cookie, not a bearer token, so the login has to happen in a real browser first:\n\n1. Open `https://localhost:7136/login` in Chrome and sign in.\n2. Press F12 > Application > Cookies > `https://localhost:7136`.\n3. Copy the **value** of the `app_session` cookie.\n4. Paste it into the `sessionCookie` environment variable.\n\nThe cookie lasts 8 hours. If requests start returning 401, repeat these steps.\n\n## Branch coverage\n\nSCRUM-33 is a superset of SCRUM-30 and SCRUM-38, so running this whole collection against the SCRUM-33 branch exercises all three at once. SCRUM-31 is not implemented and its folder is expected to fail.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "00 - Preflight",
+      "description": "Run this first. If these fail, nothing else will pass and the problem is configuration, not the feature under test.",
+      "item": [
+        {
+          "name": "API is up and configuration is bound",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/openapi/v1.json",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "openapi",
+                "v1.json"
+              ]
+            },
+            "description": "Requires ASPNETCORE_ENVIRONMENT=Development. A 500 means the Asgardeo client id/secret are not set."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Not a 500 - configuration is bound', function () {",
+                  "    pm.expect(pm.response.code, 'A 500 here almost always means Asgardeo:ClientId is missing from user-secrets').to.not.eql(500);",
+                  "});",
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Is an OpenAPI document', function () {",
+                  "    pm.expect(pm.response.json()).to.have.property('openapi');",
+                  "});",
+                  "pm.test('Responds under 5s', function () { pm.expect(pm.response.responseTime).to.be.below(5000); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "SCRUM-28 - Identity Server provisioned and app registered",
+      "description": "Verifies the Asgardeo (WSO2) tenant exists, is configured for the authorization-code + refresh-token flow, and that the backend actually enforces authentication.",
+      "item": [
+        {
+          "name": "Asgardeo discovery document is published",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{asgardeoBase}}/oauth2/token/.well-known/openid-configuration",
+              "host": [
+                "{{asgardeoBase}}"
+              ],
+              "path": [
+                "oauth2",
+                "token",
+                ".well-known",
+                "openid-configuration"
+              ]
+            },
+            "description": "The '/oauth2/token/.well-known/...' path looks wrong but is correct for Asgardeo. Do not 'fix' it."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "const d = pm.response.json();",
+                  "pm.test('Issuer belongs to the goride tenant', function () {",
+                  "    pm.expect(d.issuer).to.include('goride');",
+                  "});",
+                  "pm.test('Authorization code flow is supported', function () {",
+                  "    pm.expect(d.grant_types_supported).to.include('authorization_code');",
+                  "});",
+                  "pm.test('Refresh token grant is supported (needed by SCRUM-38)', function () {",
+                  "    pm.expect(d.grant_types_supported).to.include('refresh_token');",
+                  "});",
+                  "pm.test('PKCE S256 is supported', function () {",
+                  "    pm.expect(d.code_challenge_methods_supported).to.include('S256');",
+                  "});",
+                  "pm.test('openid scope is offered', function () {",
+                  "    pm.expect(d.scopes_supported).to.include('openid');",
+                  "});",
+                  "pm.collectionVariables.set('authorizationEndpoint', d.authorization_endpoint);",
+                  "pm.collectionVariables.set('tokenEndpoint', d.token_endpoint);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "SCIM2 API is enabled and protected",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{asgardeoBase}}/scim2/Me",
+              "host": [
+                "{{asgardeoBase}}"
+              ],
+              "path": [
+                "scim2",
+                "Me"
+              ]
+            },
+            "description": "Confirms the SCIM2 endpoint SCRUM-33 depends on exists and is not public."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Unauthenticated SCIM2 call is rejected', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Backend rejects anonymous callers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "me"
+              ]
+            },
+            "description": "The fallback authorization policy must make every endpoint authenticated by default."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401, not 500', function () { pm.response.to.have.status(401); });",
+                  "pm.test('No identity leaked in the body', function () {",
+                  "    pm.expect(pm.response.text()).to.not.include('@');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "SCRUM-30 - Rider login via OIDC authorization code flow",
+      "description": "Everything except the first request needs {{sessionCookie}} to be set. See the collection description for how to get it.",
+      "item": [
+        {
+          "name": "GET /login challenges Asgardeo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "login"
+              ]
+            },
+            "description": "Redirect following is OFF for this request so the 302 can be asserted. .NET 10 uses Pushed Authorization Requests when the tenant advertises them, which hides the PKCE parameters behind a request_uri - both forms are accepted here."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Redirects (302)', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([301, 302, 303]);",
+                  "});",
+                  "const loc = pm.response.headers.get('Location') || '';",
+                  "pm.test('Redirects to the Asgardeo tenant', function () {",
+                  "    pm.expect(loc).to.include('api.asgardeo.io');",
+                  "});",
+                  "pm.test('Uses the authorization code flow', function () {",
+                  "    pm.expect(loc).to.include('response_type=code');",
+                  "});",
+                  "pm.test('Sends a client_id', function () {",
+                  "    pm.expect(loc).to.include('client_id=');",
+                  "});",
+                  "pm.test('Uses PKCE or Pushed Authorization Requests', function () {",
+                  "    const pkce = loc.includes('code_challenge_method=S256');",
+                  "    const par = loc.includes('request_uri=');",
+                  "    pm.expect(pkce || par, 'expected code_challenge_method=S256 or a PAR request_uri').to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
+        },
+        {
+          "name": "GET /api/me returns the signed-in identity",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "app_session={{sessionCookie}}",
+                "description": "Session cookie copied from the browser after a real OIDC login."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json();",
+                  "pm.test('Returns a name', function () { pm.expect(b.name).to.be.a('string').and.not.empty; });",
+                  "pm.test('Returns an email', function () { pm.expect(b.email).to.be.a('string').and.include('@'); });",
+                  "pm.test('Returns a roles array', function () { pm.expect(b.roles).to.be.an('array'); });",
+                  "pm.collectionVariables.set('currentRoles', JSON.stringify(b.roles || []));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Claims include the roles claim",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "app_session={{sessionCookie}}",
+                "description": "Session cookie copied from the browser after a real OIDC login."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/onboarding/debug-claims",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "onboarding",
+                "debug-claims"
+              ]
+            },
+            "description": "Highest-value diagnostic in the collection. If the roles claim is absent, role checks fail for the wrong reason."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "const claims = pm.response.json();",
+                  "pm.test('Response is a claim list', function () { pm.expect(claims).to.be.an('array'); });",
+                  "pm.test('A claim of type roles is present', function () {",
+                  "    const found = claims.some(function (c) { return (c.type || c.Type) === 'roles'; });",
+                  "    pm.expect(found, 'Without a roles claim, [Authorize(Roles=...)] silently never matches and every role-based test below is meaningless').to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Select role - Rider",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "app_session={{sessionCookie}}",
+                "description": "Session cookie copied from the browser after a real OIDC login."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/onboarding/select-role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "onboarding",
+                "select-role"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Role\": \"{{roleToSelect}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Needs the AsgardeoMgmt credentials and role ids configured on the server, plus the internal_role_mgt_users_update scope."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Responds under 5s', function () { pm.expect(pm.response.responseTime).to.be.below(5000); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Select role - invalid value is rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "app_session={{sessionCookie}}",
+                "description": "Session cookie copied from the browser after a real OIDC login."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/onboarding/select-role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "onboarding",
+                "select-role"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Role\": \"Superuser\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Explains the rejection', function () {",
+                  "    pm.expect(pm.response.text()).to.include('Invalid role');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Select role - anonymous is rejected",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/onboarding/select-role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "onboarding",
+                "select-role"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"Role\": \"Driver\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "DEFECT TO RAISE: any authenticated user can currently self-assign the Driver role. Drivers should be vetted, not self-selected."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401', function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Admin endpoint is denied to a non-admin",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "app_session={{sessionCookie}}",
+                "description": "Session cookie copied from the browser after a real OIDC login."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin-check",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin-check"
+              ]
+            },
+            "description": "Run signed in as a Rider or Driver, never as an Admin."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 403', function () {",
+                  "    pm.expect(pm.response.code, 'Run this signed in as a Rider or Driver. 200 means role checks are not enforced; 401 means the session cookie is missing or expired').to.eql(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "CORS preflight allows the frontend origin",
+          "request": {
+            "method": "OPTIONS",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{frontendUrl}}"
+              },
+              {
+                "key": "Access-Control-Request-Method",
+                "value": "GET"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Preflight succeeds', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});",
+                  "pm.test('Echoes the frontend origin', function () {",
+                  "    pm.expect(pm.response.headers.get('Access-Control-Allow-Origin')).to.eql(pm.collectionVariables.get('frontendUrl'));",
+                  "});",
+                  "pm.test('Allows credentials (required for the session cookie)', function () {",
+                  "    pm.expect(pm.response.headers.get('Access-Control-Allow-Credentials')).to.eql('true');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "CORS blocks an unknown origin",
+          "request": {
+            "method": "OPTIONS",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "https://not-goride.example"
+              },
+              {
+                "key": "Access-Control-Request-Method",
+                "value": "GET"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No allow-origin header for a foreign site', function () {",
+                  "    const h = pm.response.headers.get('Access-Control-Allow-Origin');",
+                  "    pm.expect(h === null || h === undefined, 'a foreign origin must not be echoed back').to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "SCRUM-31 - Forgotten password via email OTP (NOT IMPLEMENTED)",
+      "description": "The SCRUM-31 branch is byte-identical to SCRUM-30 - no recovery code has been written. These requests document the expected contract and will return 404 today. That failure IS the test result: report it as 'feature not delivered', not as a broken test. Confirm the final route names with the developer before sign-off.",
+      "item": [
+        {
+          "name": "Request a password reset OTP",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/account/forgot-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "account",
+                "forgot-password"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testEmail}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Endpoint exists', function () {",
+                  "    pm.expect(pm.response.code, 'SCRUM-31 is not implemented on this branch').to.not.eql(404);",
+                  "});",
+                  "pm.test('Accepts the request', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 202, 204]);",
+                  "});",
+                  "pm.collectionVariables.set('forgotPasswordStatus', pm.response.code);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Unknown email must not reveal whether an account exists",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/account/forgot-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "account",
+                "forgot-password"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"definitely-not-registered-9f3a@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Endpoint exists', function () { pm.expect(pm.response.code).to.not.eql(404); });",
+                  "pm.test('Same status as a known email (no user enumeration)', function () {",
+                  "    const known = Number(pm.collectionVariables.get('forgotPasswordStatus'));",
+                  "    pm.expect(pm.response.code, 'Differing responses let an attacker enumerate registered accounts').to.eql(known);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Verify the OTP",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/account/verify-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "account",
+                "verify-otp"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"otp\": \"{{otp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Set the {{otp}} variable by hand from the received email before running."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Endpoint exists', function () { pm.expect(pm.response.code).to.not.eql(404); });",
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json();",
+                  "if (b && b.resetToken) { pm.collectionVariables.set('resetToken', b.resetToken); }"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Reset the password",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/account/reset-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "account",
+                "reset-password"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"resetToken\": \"{{resetToken}}\",\n  \"newPassword\": \"{{newPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Endpoint exists', function () { pm.expect(pm.response.code).to.not.eql(404); });",
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "An OTP cannot be replayed",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/account/verify-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "account",
+                "verify-otp"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"otp\": \"{{otp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Endpoint exists', function () { pm.expect(pm.response.code).to.not.eql(404); });",
+                  "pm.test('Reused OTP is rejected', function () {",
+                  "    pm.expect(pm.response.code, 'a single-use OTP must not verify twice').to.be.oneOf([400, 401, 410]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "SCRUM-33 - Update personal profile via SCIM2",
+      "description": "Run these in order - the last request restores the original values so the folder can be re-run cleanly.",
+      "item": [
+        {
+          "name": "Get profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "app_session={{sessionCookie}}",
+                "description": "Session cookie copied from the browser after a real OIDC login."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "profile"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "const p = pm.response.json();",
+                  "pm.test('Is a SCIM2 user resource', function () {",
+                  "    pm.expect(p.schemas).to.include('urn:ietf:params:scim:schemas:core:2.0:User');",
+                  "});",
+                  "pm.test('Has an id and a userName', function () {",
+                  "    pm.expect(p.id).to.be.a('string').and.not.empty;",
+                  "    pm.expect(p.userName).to.be.a('string').and.not.empty;",
+                  "});",
+                  "pm.collectionVariables.set('originalGivenName', (p.name && p.name.givenName) || '');",
+                  "pm.collectionVariables.set('originalFamilyName', (p.name && p.name.familyName) || '');",
+                  "console.log('Saved original name:', JSON.stringify(p.name));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Update profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "app_session={{sessionCookie}}",
+                "description": "Session cookie copied from the browser after a real OIDC login."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "profile"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"GivenName\": \"{{newGivenName}}\",\n  \"FamilyName\": \"{{newFamilyName}}\",\n  \"PhoneNumber\": \"{{newPhoneNumber}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Responds under 5s', function () { pm.expect(pm.response.responseTime).to.be.below(5000); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Get profile again - change persisted",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "app_session={{sessionCookie}}",
+                "description": "Session cookie copied from the browser after a real OIDC login."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "profile"
+              ]
+            },
+            "description": "The real acceptance test for SCRUM-33: a 200 on PATCH proves nothing on its own, the value has to come back on a fresh read."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "const p = pm.response.json();",
+                  "pm.test('Given name was actually written to Asgardeo', function () {",
+                  "    pm.expect(p.name.givenName).to.eql(pm.collectionVariables.get('newGivenName'));",
+                  "});",
+                  "pm.test('Family name was actually written to Asgardeo', function () {",
+                  "    pm.expect(p.name.familyName).to.eql(pm.collectionVariables.get('newFamilyName'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Update is denied to anonymous callers",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "profile"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"GivenName\": \"Injected\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401', function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Empty update must not crash the server",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "app_session={{sessionCookie}}",
+                "description": "Session cookie copied from the browser after a real OIDC login."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "profile"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Does not return 500', function () {",
+                  "    pm.expect(pm.response.code, 'An all-null request builds an empty SCIM Operations array - that should be a 400, never an unhandled 500').to.not.eql(500);",
+                  "});",
+                  "pm.test('Rejected or accepted cleanly', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204, 400]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Restore the original profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "app_session={{sessionCookie}}",
+                "description": "Session cookie copied from the browser after a real OIDC login."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "profile"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"GivenName\": \"{{originalGivenName}}\",\n  \"FamilyName\": \"{{originalFamilyName}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Cleanup succeeded', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "SCRUM-38 - Silent session refresh via refresh token rotation",
+      "description": "Before running: in the Asgardeo console set the application's access token lifetime to 120 seconds so expiry is reachable in a test window. Run 'Baseline', wait out the lifetime, then run the rest in order.",
+      "item": [
+        {
+          "name": "Baseline - session works and is not renewed",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "app_session={{sessionCookie}}",
+                "description": "Session cookie copied from the browser after a real OIDC login."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "const setCookie = pm.response.headers.get('Set-Cookie');",
+                  "pm.test('No cookie re-issued while the token is still fresh', function () {",
+                  "    const renewed = setCookie != null && setCookie.indexOf('app_session') !== -1;",
+                  "    pm.expect(renewed, 'a renewal this early means the expiry window check is wrong').to.be.false;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "After expiry - session refreshes silently",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "app_session={{sessionCookie}}",
+                "description": "Session cookie copied from the browser after a real OIDC login."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "me"
+              ]
+            },
+            "description": "Wait until the access token lifetime has elapsed before sending this. The rotated cookie is captured into {{sessionCookie}} automatically so later requests keep working."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Still authenticated - no re-login required', function () {",
+                  "    pm.expect(pm.response.code, 'a 401 means the refresh_token grant failed').to.eql(200);",
+                  "});",
+                  "const setCookie = pm.response.headers.get('Set-Cookie') || '';",
+                  "pm.test('A new app_session cookie was issued (rotation happened)', function () {",
+                  "    pm.expect(setCookie, 'ShouldRenew should re-issue the cookie carrying the rotated refresh token').to.include('app_session');",
+                  "});",
+                  "pm.test('Refreshed identity is still correct', function () {",
+                  "    pm.expect(pm.response.json().email).to.be.a('string').and.include('@');",
+                  "});",
+                  "const m = setCookie.match(/app_session=([^;]+)/);",
+                  "if (m) { pm.collectionVariables.set('sessionCookie', m[1]); console.log('Rotated cookie captured automatically.'); }"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "A tampered cookie is rejected",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "app_session={{sessionCookie}}TAMPERED"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401', function () { pm.response.to.have.status(401); });",
+                  "pm.test('Does not return 500', function () {",
+                  "    pm.expect(pm.response.code, 'a corrupt cookie must not produce an unhandled exception').to.not.eql(500);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Logout clears the session",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "app_session={{sessionCookie}}",
+                "description": "Session cookie copied from the browser after a real OIDC login."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "logout"
+              ]
+            },
+            "description": "RUN THIS LAST - it invalidates {{sessionCookie}} for every other request in the collection."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Redirects on sign-out', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([301, 302, 303]);",
+                  "});",
+                  "const setCookie = pm.response.headers.get('Set-Cookie') || '';",
+                  "pm.test('Session cookie is cleared', function () {",
+                  "    pm.expect(setCookie).to.include('app_session');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": [],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          }
+        },
+        {
+          "name": "Session is dead after logout",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "app_session={{sessionCookie}}",
+                "description": "Session cookie copied from the browser after a real OIDC login."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401', function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Warn early if the session cookie has not been pasted in yet.",
+          "const usesCookie = (pm.request.headers.get('Cookie') || '').indexOf('app_session') !== -1;",
+          "const cookie = pm.collectionVariables.get('sessionCookie') || pm.environment.get('sessionCookie');",
+          "if (usesCookie && (!cookie || cookie === 'PASTE_APP_SESSION_COOKIE_VALUE_HERE')) {",
+          "    console.warn('sessionCookie is not set - authenticated requests will return 401. See the collection description.');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "protocolProfileBehavior": {
+    "strictSSL": false
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://localhost:7136"
+    },
+    {
+      "key": "frontendUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "asgardeoBase",
+      "value": "https://api.asgardeo.io/t/goride"
+    },
+    {
+      "key": "sessionCookie",
+      "value": "PASTE_APP_SESSION_COOKIE_VALUE_HERE"
+    },
+    {
+      "key": "roleToSelect",
+      "value": "Rider"
+    },
+    {
+      "key": "testEmail",
+      "value": "qa.tester@example.com"
+    },
+    {
+      "key": "newPassword",
+      "value": "Ch4ngeMe!2026"
+    },
+    {
+      "key": "otp",
+      "value": ""
+    },
+    {
+      "key": "resetToken",
+      "value": ""
+    },
+    {
+      "key": "newGivenName",
+      "value": "QAGiven"
+    },
+    {
+      "key": "newFamilyName",
+      "value": "QAFamily"
+    },
+    {
+      "key": "newPhoneNumber",
+      "value": "+94771234567"
+    },
+    {
+      "key": "originalGivenName",
+      "value": ""
+    },
+    {
+      "key": "originalFamilyName",
+      "value": ""
+    },
+    {
+      "key": "authorizationEndpoint",
+      "value": ""
+    },
+    {
+      "key": "tokenEndpoint",
+      "value": ""
+    },
+    {
+      "key": "currentRoles",
+      "value": ""
+    },
+    {
+      "key": "forgotPasswordStatus",
+      "value": ""
+    }
+  ]
+}
