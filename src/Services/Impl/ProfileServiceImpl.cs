@@ -15,8 +15,7 @@ namespace SRC.Services.Impl
 
             var response = await _http.SendAsync(request);
             var body = await response.Content.ReadAsStringAsync();
-if (!response.IsSuccessStatusCode)
-            
+            if (!response.IsSuccessStatusCode)
                 throw new HttpRequestException($"Asgardeo profile GET failed ({(int)response.StatusCode}): {body}");
 
             return body;
