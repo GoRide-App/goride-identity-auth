@@ -32,7 +32,7 @@ so Postman cannot perform the login itself. Do it once in a browser.
 
 The session carries the access token, refresh token and ID token, which pushes
 it past the 4KB cookie limit. ASP.NET Core therefore splits it into three
-cookies — `app_session` (holding only the text `chunks:2`), `app_sessionC1` and
+cookies — `app_session` (holding only the text `chunks-2`), `app_sessionC1` and
 `app_sessionC2`. **All three have to be sent together**, so copy the whole
 `Cookie` header rather than a single cookie value:
 
@@ -43,7 +43,7 @@ cookies — `app_session` (holding only the text `chunks:2`), `app_sessionC1` an
 5. Copy the entire value. It looks like:
 
    ```
-   app_session=chunks:2; app_sessionC1=CfDJ8...; app_sessionC2=FbDM...
+   app_session=chunks-2; app_sessionC1=CfDJ8...; app_sessionC2=FbDM...
    ```
 
 6. Paste it into the `sessionCookie` environment variable, in the
@@ -51,7 +51,7 @@ cookies — `app_session` (holding only the text `chunks:2`), `app_sessionC1` an
 
 The session is valid for 8 hours. When requests start returning 401, repeat.
 
-> Copying only `app_session` gives you the literal string `chunks:2`, and every
+> Copying only `app_session` gives you the literal string `chunks-2`, and every
 > authenticated request returns 401.
 
 ## What each folder covers
