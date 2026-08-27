@@ -1,4 +1,6 @@
 using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
 using SRC.Services.Interfaces;
 
 namespace SRC.Services.Impl
@@ -27,10 +29,15 @@ namespace SRC.Services.Impl
 
         //     if (req.GivenName is not null || req.FamilyName is not null)
         //     {
+        //         var nameValue = new Dictionary<string, string>();
+        //         if (req.GivenName is not null) nameValue["givenName"] = req.GivenName;
+        //         if (req.FamilyName is not null) nameValue["familyName"] = req.FamilyName;
+
         //         operations.Add(new
         //         {
         //             op = "replace",
-        //             value = new { name = new { givenName = req.GivenName, familyName = req.FamilyName } }
+        //             // path = "username",
+        //             value = nameValue
         //         });
         //     }
 
@@ -39,7 +46,8 @@ namespace SRC.Services.Impl
         //         operations.Add(new
         //         {
         //             op = "replace",
-        //             value = new { phoneNumbers = new[] { new { type = "mobile", value = req.PhoneNumber } } }
+        //             // path = "PhoneNumber",
+        //             value = new[] { new { type = "mobile", value = req.PhoneNumber } }
         //         });
         //     }
 
@@ -63,7 +71,6 @@ namespace SRC.Services.Impl
         //     }
         // }
 
-
         async Task IProfileService.UpdateProfileAsync(string accessToken, ProfileUpdateRequest req)
         {
             var operations = new List<object>();
@@ -77,20 +84,30 @@ namespace SRC.Services.Impl
                 operations.Add(new
                 {
                     op = "replace",
-                    path = "username",
-                    value = nameValue
+                    value = new { name = nameValue }
                 });
             }
 
-            if (req.phone_number is not null)
+            if (req.PhoneNumber is not null)
             {
                 operations.Add(new
                 {
                     op = "replace",
-                    path = "phone_number",
-                    value = new[] { new { type = "mobile", value = req.phone_number } }
+                    value = new { phoneNumbers = new[] { new { type = "mobile", value = req.PhoneNumber } } }
                 });
             }
+
+            // if (req.Username is not null)
+            // {
+            //     operations.Add(new
+            //     {
+            //         op = "replace",
+            //         value = new { userName = req.Username }
+            //     });
+            // }    
+
+            if (operations.Count == 0)
+                throw new InvalidOperationException("No fields provided to update.");
 
             var patchBody = new
             {
@@ -100,7 +117,11 @@ namespace SRC.Services.Impl
 
             var request = new HttpRequestMessage(HttpMethod.Patch, "https://api.asgardeo.io/t/goride/scim2/Me")
             {
-                Content = JsonContent.Create(patchBody)
+                // Content = JsonContent.Create(patchBody)
+                Content = new StringContent(
+                    JsonSerializer.Serialize(patchBody),
+                    Encoding.UTF8,
+                    "application/scim+json")
             };
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 

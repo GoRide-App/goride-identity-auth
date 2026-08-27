@@ -6,4 +6,4 @@ public interface IProfileService
     Task UpdateProfileAsync(string accessToken, ProfileUpdateRequest req);
 }
 
-public record ProfileUpdateRequest(string? GivenName, string? FamilyName, string? phone_number);
+public record ProfileUpdateRequest(string? GivenName, string? FamilyName, string? PhoneNumber);//, string? Username);
