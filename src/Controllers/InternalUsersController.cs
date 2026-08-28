@@ -10,8 +10,8 @@ namespace SRC.Controllers
         private readonly IUserDirectoryService _userDirectoryService = userDirectoryService;
         private readonly IConfiguration _config = config;
 
-        [HttpGet("{sub}/{apiKey}")]
-        public async Task<IActionResult> GetUserBySub(string sub, string? apiKey)
+        [HttpGet("{sub}")]
+        public async Task<IActionResult> GetUserBySub(string sub, [FromHeader(Name = "X-Internal-Api-Key")] string? apiKey)
         {
             var expectedKey = _config["InternalServices:ApiKey"];
             if (string.IsNullOrEmpty(expectedKey) || apiKey != expectedKey)
