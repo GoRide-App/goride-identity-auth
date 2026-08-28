@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 using SRC;
+using SRC.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -147,6 +149,13 @@ builder.Services.AddCors(options =>
 
 
 builder.Services.AddControllers();
+
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var serverVersion = ServerVersion.AutoDetect(connectionString);
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseMySql(connectionString, serverVersion));
+
+
 builder.Services.AddOpenApi();
 
 ServiceExtentions.AddApplicationServices(builder.Services);
