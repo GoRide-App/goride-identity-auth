@@ -4,14 +4,14 @@ using SRC.Services.Impl;
 namespace SRC.Controllers
 {
     [ApiController]
-    [Route("internal/users")]
+    [Route("api/internal-users")]
     public class InternalUserController(IUserDirectoryService userDirectoryService, IConfiguration config) : ControllerBase
     {
         private readonly IUserDirectoryService _userDirectoryService = userDirectoryService;
         private readonly IConfiguration _config = config;
 
-        [HttpGet("{sub}")]
-        public async Task<IActionResult> GetUserBySub(string sub, [FromHeader(Name = "X-Internal-Api-Key")] string? apiKey)
+        [HttpGet("{sub}/{apiKey}")]
+        public async Task<IActionResult> GetUserBySub(string sub, string? apiKey)
         {
             var expectedKey = _config["InternalServices:ApiKey"];
             if (string.IsNullOrEmpty(expectedKey) || apiKey != expectedKey)

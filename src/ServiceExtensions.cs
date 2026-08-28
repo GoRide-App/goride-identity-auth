@@ -9,6 +9,7 @@ public static class ServiceExtentions
     {
         services.AddHttpClient<IAsgardeoRoleService, AsgardeoRoleServiceImpl>();
         services.AddHttpClient<IProfileService, ProfileServiceImpl>();
+        services.AddHttpClient<IUserDirectoryService, UserDirectoryServiceImpl>();
         return services;
     }
 }
