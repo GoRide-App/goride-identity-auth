@@ -48,7 +48,9 @@ namespace SRC.Services.Impl
                     VehicleMake = d.VehicleMake,
                     VehicleModel = d.VehicleModel,
                     VehiclePlate = d.VehiclePlate,
-                    VehicleTypeCode = d.VehicleTypeCode
+                    VehicleTypeCode = d.VehicleTypeCode,
+                    LicenseNumber = d.LicenseNumber,
+                    LicenseExpiry = d.LicenseExpiry
                 }).FirstOrDefaultAsync();
         }
 
