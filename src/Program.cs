@@ -199,6 +199,7 @@ app.MapGet("/api/me", (ClaimsPrincipal user) =>
 
     return Results.Ok(new
     {
+        userId = user.FindFirstValue("sub"),
         name = user.FindFirstValue("username"),
         email = user.FindFirstValue("email"),
         phone_number = user.FindFirstValue("phone_number"),
