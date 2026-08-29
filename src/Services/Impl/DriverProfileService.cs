@@ -52,9 +52,26 @@ namespace SRC.Services.Impl
                 }).FirstOrDefaultAsync();
         }
 
-        // Task<VehicleDto?> IDriverProfileService.UpdateVehicle(string vehicleId, VehicleDto request)
-        // {
+        async Task<DriverProfile?> IDriverProfileService.UpdateVehicle(string sub, string usrSub, UpdateVehicleDto request, bool isAdmin)
+        {
+            var driver = await _context.DriverProfile.FirstOrDefaultAsync(v => v.DriverId == sub);
+            if (driver is null) return null;
+
+            if (!isAdmin)
+            {
+                if(driver.DriverId != usrSub)
+                    throw new UnauthorizedAccessException("You can only update your own vehicle.");
+            }
             
-        // }
+            driver.VehicleMake = request.VehicleMake;
+            driver.VehicleModel = request.VehicleModel;
+            driver.VehiclePlate = request.VehiclePlate;
+            driver.VehicleTypeCode = request.VehicleTypeCode;
+            driver.LicenseNumber = request.LicenseNumber;
+            driver.LicenseExpiry = request.LicenseExpiry;
+
+            await _context.SaveChangesAsync();
+            return driver;
+        }
     }
 }

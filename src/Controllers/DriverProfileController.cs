@@ -39,14 +39,16 @@ namespace SRC.Controllers
             return vehicle is null ? NotFound() : Ok(vehicle);
         }
 
-        // [HttpPut("update/{vehicleId}")]
-        // public async Task<ActionResult<VehicleDto>> UpdateVehicle(string vehicleId,[FromBody] VehicleDto request)
-        // {
-        //     var sub = User.FindFirstValue("sub");
-        //     if (sub is null) return Unauthorized();
+        [HttpPut("update/{driverSub}")]
+        public async Task<ActionResult<DriverProfile>> UpdateVehicle(string driverSub, [FromBody] UpdateVehicleDto request)
+        {
+            var usrSub = User.FindFirstValue("sub");
+            if (usrSub is null) return Unauthorized();
 
-        //     var updated = await _service.UpdateVehicle(vehicleId, request);
-        //     return updated is null ? NotFound() : Ok(updated);
-        // }
+            var isAdmin = User.IsInRole("Admin");
+
+            var updated = await _service.UpdateVehicle(driverSub, usrSub, request, isAdmin);
+            return updated is null ? NotFound() : Ok(updated);
+        }
     }
 }
