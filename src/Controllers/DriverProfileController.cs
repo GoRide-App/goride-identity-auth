@@ -9,7 +9,7 @@ namespace SRC.Controllers
 {
     [ApiController]
     [Route("api/driver")]
-    [Authorize(Roles = "Driver")]
+    [Authorize(Roles = "Driver,Admin")]
     public class DriverProfileController: ControllerBase
     {
         private readonly IDriverProfileService _service;
