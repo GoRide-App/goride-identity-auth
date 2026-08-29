@@ -231,3 +231,25 @@ jobs:
             exit 1
           fi
           echo "All required jobs passed."
+
+  check-asgardeo-config:
+    name: Check Asgardeo config for drift
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+ 
+      - name: Fetch current Asgardeo config
+        env:
+          CLIENT_ID: ${{ secrets.ASGARDEO_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.ASGARDEO_CLIENT_SECRET }}
+          ORG_NAME: goride
+        run: |
+          chmod +x ./scripts/fetch-asgardeo-config.sh
+          ./scripts/fetch-asgardeo-config.sh
+ 
+      - name: Fail if config has drifted from what's committed
+        run: |
+          git diff --exit-code asgardeo-config/ || (
+            echo "::error::Asgardeo config in the console no longer matches what's committed in asgardeo-config/. Someone likely changed a setting manually in the Asgardeo Console without updating the repo. Review the diff above, then either update the committed files to match (if the change was intentional) or revert the change in Asgardeo (if it wasn't)." && exit 1
+          )
