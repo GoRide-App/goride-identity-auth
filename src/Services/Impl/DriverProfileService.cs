@@ -37,5 +37,19 @@ namespace SRC.Services.Impl
             await _context.SaveChangesAsync();
             return profile;
         }
+
+        async Task<VehicleDto?> IDriverProfileService.GetVehicleById(string sub)
+        {
+            return await _context.DriverProfile
+                .AsNoTracking()
+                .Where(d => d.DriverId == sub)
+                .Select(d => new VehicleDto
+                {
+                    VehicleMake = d.VehicleMake,
+                    VehicleModel = d.VehicleModel,
+                    VehiclePlate = d.VehiclePlate,
+                    VehicleTypeCode = d.VehicleTypeCode
+                }).FirstOrDefaultAsync();
+        }
     }
 }

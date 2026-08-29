@@ -19,7 +19,7 @@ namespace SRC.Controllers
             _service = service;
         }
 
-        [HttpPost]
+        [HttpPost("addProfile")]
         public async Task<ActionResult<DriverProfile>> AddProfile([FromBody] CreateDriverProfileRequestDto request)
         {
             var sub = User.FindFirstValue("sub");
@@ -29,6 +29,13 @@ namespace SRC.Controllers
             var newProfile = await _service.AddProfile(sub, request);
             if(newProfile is null) return BadRequest();
             return Ok(newProfile);
+        }
+
+        [HttpGet("{sub}")]
+        public async Task<ActionResult<VehicleDto>> GetVehicleById(string sub)
+        {
+            var vehicle = await _service.GetVehicleById(sub);
+            return vehicle is null ? NotFound() : Ok(vehicle);
         }
     }
 }
