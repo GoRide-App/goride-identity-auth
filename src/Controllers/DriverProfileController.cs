@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using SRC.Dtos;
 using SRC.Entities;
@@ -37,5 +38,15 @@ namespace SRC.Controllers
             var vehicle = await _service.GetVehicleById(sub);
             return vehicle is null ? NotFound() : Ok(vehicle);
         }
+
+        // [HttpPut("update/{vehicleId}")]
+        // public async Task<ActionResult<VehicleDto>> UpdateVehicle(string vehicleId,[FromBody] VehicleDto request)
+        // {
+        //     var sub = User.FindFirstValue("sub");
+        //     if (sub is null) return Unauthorized();
+
+        //     var updated = await _service.UpdateVehicle(vehicleId, request);
+        //     return updated is null ? NotFound() : Ok(updated);
+        // }
     }
 }

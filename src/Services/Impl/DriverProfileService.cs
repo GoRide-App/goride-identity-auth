@@ -51,5 +51,10 @@ namespace SRC.Services.Impl
                     VehicleTypeCode = d.VehicleTypeCode
                 }).FirstOrDefaultAsync();
         }
+
+        // Task<VehicleDto?> IDriverProfileService.UpdateVehicle(string vehicleId, VehicleDto request)
+        // {
+            
+        // }
     }
 }
