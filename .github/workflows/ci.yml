@@ -241,9 +241,9 @@ jobs:
  
       - name: Fetch current Asgardeo config
         env:
-          CLIENT_ID: ${{ secrets.ASGARDEO_CLIENT_ID }}
-          CLIENT_SECRET: ${{ secrets.ASGARDEO_CLIENT_SECRET }}
-          ORG_NAME: goride
+          CLIENT_ID: ${{ secrets.ASGARDEO_CONFIG_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.ASGARDEO_CONFIG_CLIENT_SECRET }}
+          ORG_NAME: ${{ secretS.ORG_NAME }}
         run: |
           chmod +x ./scripts/fetch-asgardeo-config.sh
           ./scripts/fetch-asgardeo-config.sh
