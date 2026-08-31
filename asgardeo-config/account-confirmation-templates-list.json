@@ -1,5 +1,1 @@
-{
-    "displayName": "AccountConfirmation",
-    "self": "/t/goride/api/server/v1/notification/email/template-types/QWNjb3VudENvbmZpcm1hdGlvbg",
-    "id": "QWNjb3VudENvbmZpcm1hdGlvbg"
-}
+{"displayName":"AccountConfirmation","self":"/t/goride/api/server/v1/notification/email/template-types/QWNjb3VudENvbmZpcm1hdGlvbg","id":"QWNjb3VudENvbmZpcm1hdGlvbg"}
