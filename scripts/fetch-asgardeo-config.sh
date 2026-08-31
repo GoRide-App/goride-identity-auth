@@ -6,6 +6,13 @@
 # policy, and verification email template config from Asgardeo, and save
 # each as a JSON file under asgardeo-config/.
 
+# NOTE: This check monitors the classic Identity Governance connector API.
+# Enable/disable state for self-registration and password recovery may be
+# separately controlled via Asgardeo's newer Flows system, which appears to
+# use a different backend not yet reflected here.  
+# Do not treat a green check here as proof the feature is enabled
+# for end users — verify via live test.
+
 set -e  # stop immediately if any command fails, instead of continuing silently
 
 : "${CLIENT_ID:?CLIENT_ID is not set}"
@@ -100,5 +107,13 @@ fetch "Password validation rules" \
 fetch "Account confirmation email template" \
   "$BASE_URL/email/template-types/QWNjb3VudENvbmZpcm1hdGlvbg/templates/en_US" \
   "account-confirmation-template.json"
+
+fetch "Account recovery config" \
+  "$BASE_URL/identity-governance/QWNjb3VudCBNYW5hZ2VtZW50/connectors/YWNjb3VudC1yZWNvdmVyeQ" \
+  "account-recovery-config.json"
+
+fetch "Password reset OTP email template" \
+  "$BASE_URL/email/template-types/UGFzc3dvcmRSZXNldE9UUA/templates/en_US" \
+  "password-reset-otp-template.json"
 
 echo "All config fetched successfully into $OUTPUT_DIR/"
