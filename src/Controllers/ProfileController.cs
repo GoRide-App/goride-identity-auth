@@ -30,7 +30,10 @@ namespace SRC.Controllers
             if (accessToken is null) return Unauthorized();
 
             await _profileService.UpdateProfileAsync(accessToken, req);
-            return Ok();
+            return Ok(new
+            {
+                phoneNumber = req.PhoneNumber
+            });
         }
     }
 }
