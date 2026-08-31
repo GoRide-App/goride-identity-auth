@@ -1,11 +1,11 @@
-﻿{
+{
   "$schema": "https://json.schemastore.org/launchsettings.json",
   "profiles": {
     "https": {
       "commandName": "Project",
       "dotnetRunMessages": true,
       "launchBrowser": false,
-      "applicationUrl": "https://localhost:7136",
+      "applicationUrl": "http://localhost:7136;https://localhost:7136",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }

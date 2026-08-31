@@ -10,6 +10,7 @@ public static class ServiceExtentions
         services.AddHttpClient<IAsgardeoRoleService, AsgardeoRoleServiceImpl>();
         services.AddHttpClient<IProfileService, ProfileServiceImpl>();
         services.AddHttpClient<IUserDirectoryService, UserDirectoryServiceImpl>();
+        services.AddSingleton<IDriverStatusAuditStore, DriverStatusAuditStoreImpl>();
         services.AddScoped<IDriverProfileService,DriverProfileServiceImpl>();
         return services;
     }

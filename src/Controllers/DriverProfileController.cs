@@ -50,5 +50,39 @@ namespace SRC.Controllers
             var updated = await _service.UpdateVehicle(driverSub, usrSub, request, isAdmin);
             return updated is null ? NotFound() : Ok(updated);
         }
+
+        [HttpGet("verification-status")]
+        public async Task<ActionResult<DriverStateEnforcementResponseDto>> GetVerificationStatus()
+        {
+            var driverSub = User.FindFirstValue("sub");
+            if (driverSub is null) return Unauthorized();
+
+            var statusDto = await _service.CheckDriverStateEnforcementAsync(driverSub);
+            return Ok(statusDto);
+        }
+
+        [HttpPost("go-online")]
+        public async Task<ActionResult<DriverStateEnforcementResponseDto>> GoOnline()
+        {
+            var driverSub = User.FindFirstValue("sub");
+            if (driverSub is null) return Unauthorized();
+
+            var response = await _service.GoOnlineAsync(driverSub);
+            if (!response.CanAcceptTrips)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, response);
+            }
+            return Ok(response);
+        }
+
+        [HttpPost("go-offline")]
+        public async Task<ActionResult<DriverStateEnforcementResponseDto>> GoOffline()
+        {
+            var driverSub = User.FindFirstValue("sub");
+            if (driverSub is null) return Unauthorized();
+
+            var response = await _service.GoOfflineAsync(driverSub);
+            return Ok(response);
+        }
     }
 }
