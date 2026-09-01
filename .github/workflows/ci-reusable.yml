@@ -4,15 +4,9 @@ name: CI
 # branches. This is the QA gate: nothing merges into main unless it is green.
 on:
   workflow_dispatch:
-  workflow_call:
 
 permissions:
   contents: read
-
-# A new push to the same PR cancels the previous run.
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
 
 env:
   DOTNET_VERSION: "10.0.x"
