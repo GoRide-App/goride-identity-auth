@@ -3,7 +3,7 @@ name: CI
 # Runs on every pull request into main/dev, and on direct pushes to those
 # branches. This is the QA gate: nothing merges into main unless it is green.
 on:
-  workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
