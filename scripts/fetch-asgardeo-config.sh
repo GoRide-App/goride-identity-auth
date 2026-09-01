@@ -36,7 +36,7 @@ TOKEN_HTTP_RESPONSE=$(curl -s -X POST "$TOKEN_URL" \
   -H "Authorization: Basic $TOKEN_AUTH" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   --data-urlencode "grant_type=client_credentials" \
-  --data-urlencode "scope=internal_governance_view internal_template_mgt_view internal_email_mgt_view" \
+  --data-urlencode "scope=internal_application_mgt_view internal_email_mgt_view internal_governance_view internal_session_view internal_template_mgt_view" \
   -w "\nHTTP_STATUS:%{http_code}")
 set -e
 
