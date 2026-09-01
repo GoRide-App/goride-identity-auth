@@ -79,7 +79,7 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
-      - - name: Deploy image
+      - name: Deploy image
         run: |
           az containerapp create \
             --name "${{ env.CONTAINER_APP_NAME }}" \
