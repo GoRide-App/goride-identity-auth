@@ -78,13 +78,45 @@ jobs:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          
+      - name: Verify Azure context
+        run: |
+          echo "=== Azure Account ==="
+          az account show \
+            --query "{Subscription:name,SubscriptionId:id,TenantId:tenantId}" \
+            -o table
+  
+          echo "=== Resource Group ==="
+          az group show \
+            --name "${{ env.RESOURCE_GROUP }}" \
+            -o table
+  
+          echo "=== Container App ==="
+          az containerapp show \
+            --name "${{ env.CONTAINER_APP_NAME }}" \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --query "{Name:name,ResourceGroup:resourceGroup,Environment:managedEnvironmentId}" \
+            -o table
 
       - name: Deploy image
         run: |
-            az containerapp update \
+            # Check if container app exists
+            if az containerapp show \
               --name "${{ env.CONTAINER_APP_NAME }}" \
-              --resource-group "${{ env.RESOURCE_GROUP }}" \
-              --image "${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}" \
+              --resource-group "${{ env.RESOURCE_GROUP }}" &>/dev/null; then
+              # Update existing app
+              az containerapp update \
+                --name "${{ env.CONTAINER_APP_NAME }}" \
+                --resource-group "${{ env.RESOURCE_GROUP }}" \
+                --image "${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+            else
+              # Create new app
+              az containerapp create \
+                --name "${{ env.CONTAINER_APP_NAME }}" \
+                --resource-group "${{ env.RESOURCE_GROUP }}" \
+                --image "${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}" \
+                --environment goride-env \
+                --target-port 8080
 
       - name: Deployment summary
         run: |
