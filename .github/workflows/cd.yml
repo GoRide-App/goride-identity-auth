@@ -47,7 +47,7 @@ jobs:
       - name: Log in to Azure Container Registry
         run: |
           az acr login \
-            --name gorideacrypj6laqvgkfa
+            --name ${{ env.ACR_NAME }}
 
       - name: Build Docker image
         run: |
