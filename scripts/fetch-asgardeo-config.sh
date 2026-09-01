@@ -6,6 +6,13 @@
 # policy, and verification email template config from Asgardeo, and save
 # each as a JSON file under asgardeo-config/.
 
+# NOTE: This check monitors the classic Identity Governance connector API.
+# Enable/disable state for self-registration and password recovery may be
+# separately controlled via Asgardeo's newer Flows system, which appears to
+# use a different backend not yet reflected here.  
+# Do not treat a green check here as proof the feature is enabled
+# for end users — verify via live test.
+
 set -e  # stop immediately if any command fails, instead of continuing silently
 
 : "${CLIENT_ID:?CLIENT_ID is not set}"
@@ -29,7 +36,7 @@ TOKEN_HTTP_RESPONSE=$(curl -s -X POST "$TOKEN_URL" \
   -H "Authorization: Basic $TOKEN_AUTH" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   --data-urlencode "grant_type=client_credentials" \
-  --data-urlencode "scope=internal_governance_view internal_template_mgt_view internal_email_mgt_view" \
+  --data-urlencode "scope=internal_application_mgt_view internal_email_mgt_view internal_governance_view internal_session_view internal_template_mgt_view" \
   -w "\nHTTP_STATUS:%{http_code}")
 set -e
 
@@ -100,5 +107,29 @@ fetch "Password validation rules" \
 fetch "Account confirmation email template" \
   "$BASE_URL/email/template-types/QWNjb3VudENvbmZpcm1hdGlvbg/templates/en_US" \
   "account-confirmation-template.json"
+
+fetch "Account recovery config" \
+  "$BASE_URL/identity-governance/QWNjb3VudCBNYW5hZ2VtZW50/connectors/YWNjb3VudC1yZWNvdmVyeQ" \
+  "account-recovery-config.json"
+
+fetch "Password reset OTP email template" \
+  "$BASE_URL/email/template-types/UGFzc3dvcmRSZXNldE9UUA/templates/en_US" \
+  "password-reset-otp-template.json"
+
+fetch "Account lockout config" \
+  "$BASE_URL/identity-governance/TG9naW4gQXR0ZW1wdHMgU2VjdXJpdHk/connectors/YWNjb3VudC5sb2NrLmhhbmRsZXI" \
+  "account-lock-config.json"
+
+fetch "Account lock (failed attempt) email template" \
+  "$BASE_URL/email/template-types/QWNjb3VudExvY2tGYWlsZWRBdHRlbXB0/templates/en_US" \
+  "account-lock-failed-attempt-template.json"
+
+fetch "Account unlock (time-based) email template" \
+  "$BASE_URL/email/template-types/QWNjb3VudFVubG9ja1RpbWVCYXNlZA/templates/en_US" \
+  "account-unlock-timebased-template.json"
+
+fetch "GoRide app OIDC token settings" \
+  "$BASE_URL/applications/10e07117-6f95-4f33-91dc-34416f047d9b/inbound-protocols/oidc" \
+  "goride-app-oidc-config.json"
 
 echo "All config fetched successfully into $OUTPUT_DIR/"
