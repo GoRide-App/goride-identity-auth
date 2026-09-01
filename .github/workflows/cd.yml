@@ -53,7 +53,7 @@ jobs:
       - name: Build Docker image
         run: |
           docker build \
-          -t ${{ env.ACR_LOGIN_SERVER }}${{ env.IMAGE_NAME }}:${{ github.sha }} .
+          -t ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
 
       - name: Push Docker image
         run: |
