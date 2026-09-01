@@ -116,4 +116,16 @@ fetch "Password reset OTP email template" \
   "$BASE_URL/email/template-types/UGFzc3dvcmRSZXNldE9UUA/templates/en_US" \
   "password-reset-otp-template.json"
 
+fetch "Account lockout config" \
+  "$BASE_URL/identity-governance/TG9naW4gQXR0ZW1wdHMgU2VjdXJpdHk/connectors/YWNjb3VudC5sb2NrLmhhbmRsZXI" \
+  "account-lock-config.json"
+
+fetch "Account lock (failed attempt) email template" \
+  "$BASE_URL/email/template-types/QWNjb3VudExvY2tGYWlsZWRBdHRlbXB0/templates/en_US" \
+  "account-lock-failed-attempt-template.json"
+
+fetch "Account unlock (time-based) email template" \
+  "$BASE_URL/email/template-types/QWNjb3VudFVubG9ja1RpbWVCYXNlZA/templates/en_US" \
+  "account-unlock-timebased-template.json"
+
 echo "All config fetched successfully into $OUTPUT_DIR/"
