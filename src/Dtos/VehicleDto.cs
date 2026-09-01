@@ -6,4 +6,6 @@ public class VehicleDto
     public string VehicleModel { get; set; } = null!;
     public string VehiclePlate { get; set; } = null!;
     public string VehicleTypeCode { get; set; } = null!;
+    public string LicenseNumber { get; set; } = null!;
+    public DateOnly LicenseExpiry { get; set; }
 }
