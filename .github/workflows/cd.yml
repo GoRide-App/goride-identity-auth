@@ -79,12 +79,15 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Deploy image
+      - - name: Deploy image
         run: |
-          az containerapp update \
+          az containerapp create \
             --name "${{ env.CONTAINER_APP_NAME }}" \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --image "${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+            --image "${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}" \
+            --ingress external \
+            --target-port 8080 \
+            --environment goride-env
 
       - name: Deployment summary
         run: |
