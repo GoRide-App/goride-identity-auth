@@ -128,4 +128,8 @@ fetch "Account unlock (time-based) email template" \
   "$BASE_URL/email/template-types/QWNjb3VudFVubG9ja1RpbWVCYXNlZA/templates/en_US" \
   "account-unlock-timebased-template.json"
 
+fetch "GoRide app OIDC token settings" \
+  "$BASE_URL/applications/10e07117-6f95-4f33-91dc-34416f047d9b/inbound-protocols/oidc" \
+  "goride-app-oidc-config.json"
+
 echo "All config fetched successfully into $OUTPUT_DIR/"
