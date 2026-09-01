@@ -1,3 +1,4 @@
+using GoRide.Api.Options;   
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authentication;
@@ -12,6 +13,28 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
+builder.Services.AddControllers();
+
+builder.Services.AddCors();
+
+builder.Services
+    .AddOptions<AsgardeoOptions>()
+    .Bind(builder.Configuration.GetSection("Asgardeo"))
+    .ValidateDataAnnotations()
+    .Validate(o => !string.IsNullOrWhiteSpace(o.BaseUrl), "Asgardeo:BaseUrl is required")
+    .Validate(o => !string.IsNullOrWhiteSpace(o.ClientId), "Asgardeo:ClientId is required")
+    .Validate(o => !string.IsNullOrWhiteSpace(o.ClientSecret), "Asgardeo:ClientSecret is required")
+    .ValidateOnStart();
+
+builder.Services
+    .AddOptions<AsgardeoMgmtOptions>()
+    .Bind(builder.Configuration.GetSection("AsgardeoMgmt"))
+    .ValidateOnStart();
+
+builder.Services
+    .AddOptions<AsgardeoRolesOptions>()
+    .Bind(builder.Configuration.GetSection("AsgardeoRoles"))
+    .ValidateOnStart();
 
 builder.Services.AddAuthentication(options =>
 {
