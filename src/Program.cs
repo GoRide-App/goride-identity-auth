@@ -15,28 +15,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-builder.Services.AddCors();
-
-builder.Services
-    .AddOptions<AsgardeoOptions>()
-    .Bind(builder.Configuration.GetSection("Asgardeo"))
-    .ValidateDataAnnotations()
-    .Validate(o => !string.IsNullOrWhiteSpace(o.BaseUrl), "Asgardeo:BaseUrl is required")
-    .Validate(o => !string.IsNullOrWhiteSpace(o.ClientId), "Asgardeo:ClientId is required")
-    .Validate(o => !string.IsNullOrWhiteSpace(o.ClientSecret), "Asgardeo:ClientSecret is required")
-    .ValidateOnStart();
-
-builder.Services
-    .AddOptions<AsgardeoMgmtOptions>()
-    .Bind(builder.Configuration.GetSection("AsgardeoMgmt"))
-    .ValidateOnStart();
-
-builder.Services
-    .AddOptions<AsgardeoRolesOptions>()
-    .Bind(builder.Configuration.GetSection("AsgardeoRoles"))
-    .ValidateOnStart();
-
-
 builder.Services
     .AddOptions<AsgardeoOptions>()
     .Bind(builder.Configuration.GetSection("Asgardeo"))
@@ -157,7 +135,7 @@ builder.Services.AddAuthentication(options =>
     options.ClaimActions.MapUniqueJsonKey("roles", "roles");
 
     options.TokenValidationParameters.NameClaimType = "name";
-    options.TokenValidationParameters.RoleClaimType = "roles"; // Asgardeo's claim name — without this, [Authorize(Roles=...)] never matches
+    options.TokenValidationParameters.RoleClaimType = "roles";
 
     options.Events.OnRedirectToIdentityProvider = context =>
     {
@@ -190,8 +168,6 @@ builder.Services.AddCors(options =>
               .AllowCredentials());
 });
 
-
-builder.Services.AddControllers();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 var serverVersion = ServerVersion.AutoDetect(connectionString);
