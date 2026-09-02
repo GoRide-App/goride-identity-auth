@@ -1,6 +1,22 @@
-@GoRide.IdentityAuth_HostAddress = http://localhost:5039
+@GoRide.IdentityAuth_HostAddress = https://localhost:7136
 
-GET {{GoRide.IdentityAuth_HostAddress}}/weatherforecast/
+# Sign in through the browser first (GET /login), then copy the full Cookie header
+# (app_session, app_sessionC1, app_sessionC2) into the variable below.
+@sessionCookie = app_session=chunks-2; app_sessionC1=...; app_sessionC2=...
+
+### Who am I
+GET {{GoRide.IdentityAuth_HostAddress}}/api/me
+Cookie: {{sessionCookie}}
 Accept: application/json
 
-###
+### SCIM2 profile
+GET {{GoRide.IdentityAuth_HostAddress}}/api/profile
+Cookie: {{sessionCookie}}
+Accept: application/json
+
+### Select role after first login
+POST {{GoRide.IdentityAuth_HostAddress}}/api/onboarding/select-role
+Cookie: {{sessionCookie}}
+Content-Type: application/json
+
+{ "role": "Rider" }

@@ -1,21 +1,20 @@
-using GoRide.Api.Options;   
 using System.Security.Claims;
 using System.Text.Json;
+using GoRide.Api.Options;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using SRC;
 using SRC.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
-builder.Services.AddControllers();
-
-builder.Services.AddCors();
+// ---------------------------------------------------------------------------
+// Configuration
+// ---------------------------------------------------------------------------
 
 builder.Services
     .AddOptions<AsgardeoOptions>()
@@ -36,25 +35,13 @@ builder.Services
     .Bind(builder.Configuration.GetSection("AsgardeoRoles"))
     .ValidateOnStart();
 
+// Read once for the pieces of the OIDC handler that must be configured up front.
+var asgardeo = builder.Configuration.GetSection("Asgardeo").Get<AsgardeoOptions>()
+               ?? throw new InvalidOperationException("Asgardeo configuration section is missing");
 
-builder.Services
-    .AddOptions<AsgardeoOptions>()
-    .Bind(builder.Configuration.GetSection("Asgardeo"))
-    .ValidateDataAnnotations()
-    .Validate(o => !string.IsNullOrWhiteSpace(o.BaseUrl), "Asgardeo:BaseUrl is required")
-    .Validate(o => !string.IsNullOrWhiteSpace(o.ClientId), "Asgardeo:ClientId is required")
-    .Validate(o => !string.IsNullOrWhiteSpace(o.ClientSecret), "Asgardeo:ClientSecret is required")
-    .ValidateOnStart();
-
-builder.Services
-    .AddOptions<AsgardeoMgmtOptions>()
-    .Bind(builder.Configuration.GetSection("AsgardeoMgmt"))
-    .ValidateOnStart();
-
-builder.Services
-    .AddOptions<AsgardeoRolesOptions>()
-    .Bind(builder.Configuration.GetSection("AsgardeoRoles"))
-    .ValidateOnStart();
+// ---------------------------------------------------------------------------
+// Authentication
+// ---------------------------------------------------------------------------
 
 builder.Services.AddAuthentication(options =>
 {
@@ -81,8 +68,6 @@ builder.Services.AddAuthentication(options =>
         return Task.CompletedTask;
     };
 
-
-
     options.Events.OnValidatePrincipal = async context =>
     {
         var expiresAt = context.Properties.GetTokens()
@@ -100,22 +85,23 @@ builder.Services.AddAuthentication(options =>
             return;
         }
 
-        var config = context.HttpContext.RequestServices.GetRequiredService<IConfiguration>();
-        var http = context.HttpContext.RequestServices.GetRequiredService<IHttpClientFactory>().CreateClient();
+        var services = context.HttpContext.RequestServices;
+        var asgardeoOptions = services.GetRequiredService<IOptions<AsgardeoOptions>>().Value;
+        var http = services.GetRequiredService<IHttpClientFactory>().CreateClient();
 
         var response = await http.PostAsync(
-            "https://api.asgardeo.io/t/goride/oauth2/token",
+            asgardeoOptions.TokenEndpoint,
             new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 ["grant_type"] = "refresh_token",
                 ["refresh_token"] = refreshToken,
-                ["client_id"] = config["Asgardeo:ClientId"]!,
-                ["client_secret"] = config["Asgardeo:ClientSecret"]!
+                ["client_id"] = asgardeoOptions.ClientId,
+                ["client_secret"] = asgardeoOptions.ClientSecret
             }));
 
         if (!response.IsSuccessStatusCode)
         {
-            context.RejectPrincipal(); // refresh failed — force re-login
+            context.RejectPrincipal(); // refresh failed (revoked, expired or account disabled) — force re-login
             return;
         }
 
@@ -132,14 +118,15 @@ builder.Services.AddAuthentication(options =>
 })
 .AddOpenIdConnect(options =>
 {
-    options.Authority = "https://api.asgardeo.io/t/goride/oauth2/token";
-    options.ClientId = builder.Configuration["Asgardeo:ClientId"];
-    options.ClientSecret = builder.Configuration["Asgardeo:ClientSecret"];
+    // Asgardeo publishes its discovery document under the token endpoint:
+    // {BaseUrl}/oauth2/token/.well-known/openid-configuration
+    options.Authority = asgardeo.TokenEndpoint;
+    options.ClientId = asgardeo.ClientId;
+    options.ClientSecret = asgardeo.ClientSecret;
     options.ResponseType = "code";
     options.UsePkce = true;
     options.SaveTokens = true;
     options.GetClaimsFromUserInfoEndpoint = true;
-
 
     options.Scope.Clear();
     options.Scope.Add("openid");
@@ -150,7 +137,7 @@ builder.Services.AddAuthentication(options =>
     options.Scope.Add("internal_login");
     options.Scope.Add("phone");
 
-    options.CallbackPath = "/signin-oidc"; // must exactly match what you registered in Step 1
+    options.CallbackPath = "/signin-oidc"; // must exactly match the redirect URI registered in Asgardeo
     options.SignedOutCallbackPath = "/signout-callback-oidc";
 
     options.MapInboundClaims = false;
@@ -190,14 +177,18 @@ builder.Services.AddCors(options =>
               .AllowCredentials());
 });
 
+// ---------------------------------------------------------------------------
+// Application services
+// ---------------------------------------------------------------------------
 
 builder.Services.AddControllers();
+builder.Services.AddProblemDetails();
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+                       ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is required");
 var serverVersion = ServerVersion.AutoDetect(connectionString);
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(connectionString, serverVersion));
-
 
 builder.Services.AddOpenApi();
 
@@ -208,6 +199,15 @@ var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 
+// Unhandled exceptions become RFC 7807 problem responses instead of leaking stack traces.
+app.UseExceptionHandler();
+
+if (app.Environment.IsDevelopment())
+{
+    // Only meaningful locally: the container listens on plain HTTP behind the
+    // Container Apps ingress, which terminates TLS itself.
+    app.UseHttpsRedirection();
+}
 
 app.UseCors("frontend");
 app.UseAuthentication();
@@ -234,11 +234,9 @@ app.MapGet("/logout", () =>
             [CookieAuthenticationDefaults.AuthenticationScheme, OpenIdConnectDefaults.AuthenticationScheme]
         ));
 
-
 app.MapGet("/api/me", (ClaimsPrincipal user) =>
 {
     if (!user.Identity!.IsAuthenticated) return Results.Unauthorized();
-
 
     return Results.Ok(new
     {
@@ -253,13 +251,6 @@ app.MapGet("/api/me", (ClaimsPrincipal user) =>
 app.MapGet("/api/admin-check", () => Results.Ok(new { message = "You're an admin" }))
    .RequireAuthorization(policy => policy.RequireRole("Admin"));
 
-
-
-app.UseHttpsRedirection();
-
-
-
 app.MapControllers();
-
 
 app.Run();

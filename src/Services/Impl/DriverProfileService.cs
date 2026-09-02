@@ -16,10 +16,10 @@ namespace SRC.Services.Impl
             _context = context;
         }
 
-        async Task<DriverProfile> IDriverProfileService.AddProfile(string sub, CreateDriverProfileRequestDto request)
+        async Task<DriverProfile?> IDriverProfileService.AddProfile(string sub, CreateDriverProfileRequestDto request)
         {
             var exists = await _context.DriverProfile.AnyAsync(d => d.DriverId == sub);
-            if (exists) throw new HttpRequestException("A profile already exists for this driver!!!");
+            if (exists) return null; // the controller turns this into 409 Conflict
 
             var profile = new DriverProfile
             {

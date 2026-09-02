@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using SRC.Services.Impl;
+using SRC.Services.Interfaces;
 
 namespace SRC.Controllers
 {

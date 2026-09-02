@@ -1,4 +1,4 @@
-namespace SRC.Services.Impl;
+namespace SRC.Services.Interfaces;
 
 public interface IUserDirectoryService
 {

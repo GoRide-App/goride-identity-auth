@@ -26,9 +26,6 @@ namespace SRC.Controllers
             if (asgardeoUserId is null)
                 return Unauthorized();
 
-            var displayName = User.FindFirstValue("name") ?? User.FindFirstValue("email") ?? asgardeoUserId;
-
-            var email = User.FindFirstValue("email");
             var username = User.FindFirstValue("username") ?? asgardeoUserId;
 
             var roleId = req.Role switch
@@ -37,10 +34,12 @@ namespace SRC.Controllers
                 "Rider" => _config["AsgardeoRoles:RiderRoleId"],
                 _ => null
             };
-            if (roleId is null)
+            if (string.IsNullOrWhiteSpace(roleId))
                 return BadRequest("Invalid role");
 
-            if (email == null) return BadRequest("Email Not found in RegistrationController!!!");
+            if (User.FindFirstValue("email") is null)
+                return BadRequest("The session has no email claim; sign in again.");
+
             await _roleService.AssignRoleAsync(asgardeoUserId, username, roleId);
             return Ok();
         }
