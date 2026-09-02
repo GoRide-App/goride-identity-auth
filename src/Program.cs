@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using GoRide.Api.Options;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -224,7 +225,11 @@ builder.Services.AddCors(options =>
 // Application services
 // ---------------------------------------------------------------------------
 
-builder.Services.AddControllers();
+// Enums (DriverStatus, document types) serialise by name — the frontend matches on
+// "PendingVerification", not on 0.
+builder.Services.AddControllers()
+    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddProblemDetails();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
