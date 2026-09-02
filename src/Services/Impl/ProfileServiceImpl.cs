@@ -47,7 +47,7 @@ namespace SRC.Services.Impl
                     op = "replace",
                     value = new { phoneNumbers = new[] { new { type = "mobile", value = req.PhoneNumber } } }
                 });
-            }  
+            }
 
             if (operations.Count == 0)
                 throw new InvalidOperationException("No fields provided to update.");

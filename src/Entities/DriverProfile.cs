@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using SRC.Enums;
 
 namespace SRC.Entities;
+
 public class DriverProfile
 {
     [Key]
@@ -12,7 +13,7 @@ public class DriverProfile
     public string VehicleTypeCode { get; set; } = null!;
     public string LicenseNumber { get; set; } = null!;
     public DateOnly LicenseExpiry { get; set; }
-    public DriverStatus Status {get; set;}
+    public DriverStatus Status { get; set; }
     public DateTime? VerifiedAt { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

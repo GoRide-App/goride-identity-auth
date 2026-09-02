@@ -7,7 +7,7 @@ namespace SRC.Controllers
 {
     [ApiController]
     [Route("api/onboarding")]
-    public class RegistrationController: ControllerBase
+    public class RegistrationController : ControllerBase
     {
         private readonly IAsgardeoRoleService _roleService;
         private readonly IConfiguration _config;
@@ -40,7 +40,7 @@ namespace SRC.Controllers
             if (roleId is null)
                 return BadRequest("Invalid role");
 
-            if(email == null) return BadRequest("Email Not found in RegistrationController!!!");
+            if (email == null) return BadRequest("Email Not found in RegistrationController!!!");
             await _roleService.AssignRoleAsync(asgardeoUserId, username, roleId);
             return Ok();
         }
@@ -55,7 +55,7 @@ namespace SRC.Controllers
     }
 
 
-    
+
 
     public record RoleSelectionRequest(string Role);
 }

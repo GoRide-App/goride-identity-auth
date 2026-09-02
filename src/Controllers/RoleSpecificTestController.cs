@@ -5,7 +5,7 @@ namespace SRC.Controllers
 {
     [ApiController]
     [Route("api/role-specific")]
-    public class RoleSpecificTestController: ControllerBase
+    public class RoleSpecificTestController : ControllerBase
     {
         [HttpGet("driver")]
         [Authorize(Roles = "Driver")]

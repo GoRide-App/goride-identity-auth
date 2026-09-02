@@ -8,9 +8,9 @@ namespace SRC.Controllers
     [ApiController]
     [Route("api/profile")]
     [Authorize]
-    public class ProfileController: ControllerBase
+    public class ProfileController : ControllerBase
     {
-         private readonly IProfileService _profileService;
+        private readonly IProfileService _profileService;
         public ProfileController(IProfileService profileService) => _profileService = profileService;
 
         [HttpGet]

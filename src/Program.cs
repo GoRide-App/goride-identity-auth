@@ -96,7 +96,7 @@ builder.Services.AddAuthentication(options =>
     options.UsePkce = true;
     options.SaveTokens = true;
     options.GetClaimsFromUserInfoEndpoint = true;
-    
+
 
     options.Scope.Clear();
     options.Scope.Add("openid");
