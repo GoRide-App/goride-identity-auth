@@ -27,7 +27,7 @@ param asgardeoRiderRoleId string
 param asgardeoDriverRoleId string
 
 @description('Port the container listens on. The placeholder helloworld image uses 80; switch to 8080 (or your actual port) once you deploy your real GoRide image.')
-param targetPort int = 80
+param targetPort int = 8080
 
 @description('Container image to deploy, e.g. gorideacr.azurecr.io/goride-api:latest. Leave default for first deploy before an image exists.')
 param containerImage string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
