@@ -9,7 +9,7 @@ public class AppDbContext : DbContext
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     public DbSet<DriverProfile> DriverProfile { get; set; }
-
+    public DbSet<UserAccount> UserAccounts { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -44,8 +44,42 @@ public class AppDbContext : DbContext
             entity.Property(d => d.UpdatedAt)
                 .HasColumnName("updated_at")
                 .HasColumnType("timestamp")
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                // ON UPDATE is what makes MySQL bump the value; a bare default never changes after insert.
+                .HasDefaultValueSql("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
                 .ValueGeneratedOnAddOrUpdate();
+        });
+
+        modelBuilder.Entity<UserAccount>(entity =>
+        {
+            entity.ToTable("user_accounts");
+
+            entity.Property(u => u.UserId)
+                .HasColumnName("user_id")
+                .HasMaxLength(64);
+
+            entity.Property(u => u.Status)
+                .HasColumnName("status")
+                .HasMaxLength(32)
+                .HasConversion(
+                    v => v.ToString().ToLower(),
+                    v => (AccountStatus)Enum.Parse(typeof(AccountStatus), v, true));
+
+            entity.Property(u => u.DeactivatedAt).HasColumnName("deactivated_at");
+
+            entity.Property(u => u.CreatedAt)
+                .HasColumnName("created_at")
+                .HasColumnType("timestamp")
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .ValueGeneratedOnAdd();
+
+            entity.Property(u => u.UpdatedAt)
+                .HasColumnName("updated_at")
+                .HasColumnType("timestamp")
+                // ON UPDATE is what makes MySQL bump the value; a bare default never changes after insert.
+                .HasDefaultValueSql("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
+                .ValueGeneratedOnAddOrUpdate();
+
+            entity.HasIndex(u => u.Status).HasDatabaseName("ix_user_accounts_status");
         });
     }
 }
