@@ -20,3 +20,24 @@ Cookie: {{sessionCookie}}
 Content-Type: application/json
 
 { "role": "Rider" }
+
+### SCRUM-35 — deactivate without confirming (expect 400)
+POST {{GoRide.IdentityAuth_HostAddress}}/api/account/deactivate
+Cookie: {{sessionCookie}}
+Content-Type: application/json
+
+{ "confirm": false }
+
+### SCRUM-35 — deactivate my account (expect 200, session cookie cleared; 409 while a trip is active)
+# Irreversible from the app: only an Asgardeo admin can re-enable the account afterwards.
+POST {{GoRide.IdentityAuth_HostAddress}}/api/account/deactivate
+Cookie: {{sessionCookie}}
+Content-Type: application/json
+
+{ "confirm": true }
+
+### SCRUM-35 — anonymous caller (expect 401)
+POST {{GoRide.IdentityAuth_HostAddress}}/api/account/deactivate
+Content-Type: application/json
+
+{ "confirm": true }

@@ -5,6 +5,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>84f5e041-0d1d-418d-b5ba-82b93da6a7c3</UserSecretsId>
+    <!-- XML doc comments flow into the generated OpenAPI document (summaries + response descriptions). -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,4 +1,5 @@
 namespace GoRide.Api.Options;
+
 public class AsgardeoRolesOptions
 {
     public string RiderRoleId { get; set; } = default!;

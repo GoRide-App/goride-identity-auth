@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using SRC;
 using SRC.Data;
+using SRC.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,9 +36,21 @@ builder.Services
     .Bind(builder.Configuration.GetSection("AsgardeoRoles"))
     .ValidateOnStart();
 
-// Read once for the pieces of the OIDC handler that must be configured up front.
+builder.Services
+    .AddOptions<TripServiceOptions>()
+    .Bind(builder.Configuration.GetSection("TripService"));
+
+builder.Services
+    .AddOptions<FrontendOptions>()
+    .Bind(builder.Configuration.GetSection("Frontend"))
+    .Validate(o => Uri.TryCreate(o.BaseUrl, UriKind.Absolute, out _), "Frontend:BaseUrl must be an absolute URL")
+    .ValidateOnStart();
+
+// Read once for the pieces of the OIDC handler and CORS that must be configured up front.
 var asgardeo = builder.Configuration.GetSection("Asgardeo").Get<AsgardeoOptions>()
                ?? throw new InvalidOperationException("Asgardeo configuration section is missing");
+var frontend = builder.Configuration.GetSection("Frontend").Get<FrontendOptions>() ?? new FrontendOptions();
+var frontendBaseUrl = frontend.BaseUrl.TrimEnd('/');
 
 // ---------------------------------------------------------------------------
 // Authentication
@@ -70,6 +83,18 @@ builder.Services.AddAuthentication(options =>
 
     options.Events.OnValidatePrincipal = async context =>
     {
+        var services = context.HttpContext.RequestServices;
+
+        // SCRUM-35: a session that outlived its account's deactivation is dropped immediately,
+        // without waiting for the access token to expire and the refresh to be refused.
+        var sub = context.Principal?.FindFirstValue("sub");
+        if (sub is not null && await IsLocallyDeactivatedAsync(services, sub, context.HttpContext.RequestAborted))
+        {
+            context.RejectPrincipal();
+            await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            return;
+        }
+
         var expiresAt = context.Properties.GetTokens()
             .FirstOrDefault(t => t.Name == "expires_at")?.Value;
 
@@ -85,7 +110,6 @@ builder.Services.AddAuthentication(options =>
             return;
         }
 
-        var services = context.HttpContext.RequestServices;
         var asgardeoOptions = services.GetRequiredService<IOptions<AsgardeoOptions>>().Value;
         var http = services.GetRequiredService<IHttpClientFactory>().CreateClient();
 
@@ -154,6 +178,25 @@ builder.Services.AddAuthentication(options =>
         }
         return Task.CompletedTask;
     };
+
+    // SCRUM-35 scenario 2: the Identity Server refuses disabled accounts itself; this is the
+    // local backstop so a deactivated profile can never be signed in even if the IdP flag lags.
+    options.Events.OnTokenValidated = async context =>
+    {
+        var sub = context.Principal?.FindFirstValue("sub");
+        if (sub is not null && await IsLocallyDeactivatedAsync(context.HttpContext.RequestServices, sub, context.HttpContext.RequestAborted))
+        {
+            context.Fail("account_deactivated");
+        }
+    };
+
+    options.Events.OnRemoteFailure = context =>
+    {
+        var reason = context.Failure?.Message == "account_deactivated" ? "account_deactivated" : "login_failed";
+        context.Response.Redirect($"{frontendBaseUrl}/?error={reason}");
+        context.HandleResponse();
+        return Task.CompletedTask;
+    };
 });
 
 builder.Services.AddAuthorization(options =>
@@ -171,7 +214,7 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("frontend", policy =>
-        policy.WithOrigins("http://localhost:3000")
+        policy.WithOrigins(frontendBaseUrl)
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials());
@@ -215,7 +258,7 @@ app.UseAuthorization();
 
 app.MapGet("/login", (string? returnUrl, string? prompt) =>
 {
-    var properties = new AuthenticationProperties { RedirectUri = returnUrl ?? "http://localhost:3000" };
+    var properties = new AuthenticationProperties { RedirectUri = returnUrl ?? frontendBaseUrl };
     if (prompt == "login")
     {
         properties.Items["forceFresh"] = "true";
@@ -230,7 +273,7 @@ if (app.Environment.IsDevelopment())
 
 app.MapGet("/logout", () =>
         Results.SignOut(
-            new AuthenticationProperties { RedirectUri = "http://localhost:3000" },
+            new AuthenticationProperties { RedirectUri = frontendBaseUrl },
             [CookieAuthenticationDefaults.AuthenticationScheme, OpenIdConnectDefaults.AuthenticationScheme]
         ));
 
@@ -254,3 +297,21 @@ app.MapGet("/api/admin-check", () => Results.Ok(new { message = "You're an admin
 app.MapControllers();
 
 app.Run();
+
+// Looks up the local soft-delete flag. The Identity Server remains the authority, so a
+// database outage logs an error and lets the request through rather than locking everyone out.
+static async Task<bool> IsLocallyDeactivatedAsync(IServiceProvider services, string userId, CancellationToken cancellationToken)
+{
+    try
+    {
+        var accounts = services.GetRequiredService<IAccountDeactivationService>();
+        return await accounts.IsDeactivatedAsync(userId, cancellationToken);
+    }
+    catch (Exception ex) when (ex is not OperationCanceledException)
+    {
+        services.GetRequiredService<ILoggerFactory>()
+            .CreateLogger("AccountStatus")
+            .LogError(ex, "Could not read local account status for {UserId}; treating as active.", userId);
+        return false;
+    }
+}

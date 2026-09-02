@@ -1,6 +1,8 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using GoRide.Api.Options;
+using Microsoft.Extensions.Options;
 using SRC.Services.Interfaces;
 
 namespace SRC.Services.Impl
@@ -8,14 +10,20 @@ namespace SRC.Services.Impl
     public class ProfileServiceImpl : IProfileService
     {
         private readonly HttpClient _http;
-        public ProfileServiceImpl(HttpClient http) => _http = http;
+        private readonly IOptions<AsgardeoOptions> _asgardeo;
+
+        public ProfileServiceImpl(HttpClient http, IOptions<AsgardeoOptions> asgardeo)
+        {
+            _http = http;
+            _asgardeo = asgardeo;
+        }
 
         async Task<string> IProfileService.GetProfileAsync(string accessToken)
         {
-            var request = new HttpRequestMessage(HttpMethod.Get, "https://api.asgardeo.io/t/goride/scim2/Me");
+            var request = new HttpRequestMessage(HttpMethod.Get, _asgardeo.Value.ScimMeEndpoint);
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
-            var response = await _http.SendAsync(request);
+            using var response = await _http.SendAsync(request);
             var body = await response.Content.ReadAsStringAsync();
             if (!response.IsSuccessStatusCode)
                 throw new HttpRequestException($"Asgardeo profile GET failed ({(int)response.StatusCode}): {body}");
@@ -58,9 +66,8 @@ namespace SRC.Services.Impl
                 Operations = operations
             };
 
-            var request = new HttpRequestMessage(HttpMethod.Patch, "https://api.asgardeo.io/t/goride/scim2/Me")
+            var request = new HttpRequestMessage(HttpMethod.Patch, _asgardeo.Value.ScimMeEndpoint)
             {
-                // Content = JsonContent.Create(patchBody)
                 Content = new StringContent(
                     JsonSerializer.Serialize(patchBody),
                     Encoding.UTF8,
@@ -68,7 +75,7 @@ namespace SRC.Services.Impl
             };
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
-            var response = await _http.SendAsync(request);
+            using var response = await _http.SendAsync(request);
             if (!response.IsSuccessStatusCode)
             {
                 var errorBody = await response.Content.ReadAsStringAsync();

@@ -11,4 +11,6 @@ public class AsgardeoOptions
     public string JwksUri => $"{BaseUrl}/oauth2/jwks";
     public string UserInfoEndpoint => $"{BaseUrl}/oauth2/userinfo";
     public string ScimUsersEndpoint => $"{BaseUrl}/scim2/Users";
+    public string ScimMeEndpoint => $"{BaseUrl}/scim2/Me";
+    public string ScimRolesEndpoint => $"{BaseUrl}/scim2/v2/Roles";
 }
