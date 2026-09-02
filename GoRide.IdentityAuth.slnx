@@ -2,4 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/GoRide.IdentityAuth.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/GoRide.IdentityAuth.Tests/GoRide.IdentityAuth.Tests.csproj" />
+  </Folder>
 </Solution>
