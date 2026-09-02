@@ -132,4 +132,11 @@ fetch "GoRide app OIDC token settings" \
   "$BASE_URL/applications/10e07117-6f95-4f33-91dc-34416f047d9b/inbound-protocols/oidc" \
   "goride-app-oidc-config.json"
 
+# Account disable connector (SCRUM-35). The API sets accountDisabled=true via SCIM2;
+# this connector is what makes the Identity Server refuse logins for such accounts,
+# so its enabled flag must be true. Connector id = base64("account.disable.handler").
+fetch "Account disable config" \
+  "$BASE_URL/identity-governance/QWNjb3VudCBNYW5hZ2VtZW50/connectors/YWNjb3VudC5kaXNhYmxlLmhhbmRsZXI" \
+  "account-disable-config.json"
+
 echo "All config fetched successfully into $OUTPUT_DIR/"
