@@ -8,9 +8,9 @@ namespace SRC.Controllers
     [ApiController]
     [Route("api/profile")]
     [Authorize]
-    public class ProfileController: ControllerBase
+    public class ProfileController : ControllerBase
     {
-         private readonly IProfileService _profileService;
+        private readonly IProfileService _profileService;
         public ProfileController(IProfileService profileService) => _profileService = profileService;
 
         [HttpGet]
@@ -30,7 +30,10 @@ namespace SRC.Controllers
             if (accessToken is null) return Unauthorized();
 
             await _profileService.UpdateProfileAsync(accessToken, req);
-            return Ok();
+            return Ok(new
+            {
+                phoneNumber = req.PhoneNumber
+            });
         }
     }
 }

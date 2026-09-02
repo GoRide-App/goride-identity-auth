@@ -34,7 +34,7 @@ namespace SRC.Services.Impl
 
             var response = await _http.SendAsync(request);
             response.EnsureSuccessStatusCode();
-            var json = await response.Content.ReadFromJsonAsync<JsonElement>(); 
+            var json = await response.Content.ReadFromJsonAsync<JsonElement>();
             return json.GetProperty("access_token").GetString()!;
         }
 

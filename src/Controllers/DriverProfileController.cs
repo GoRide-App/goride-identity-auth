@@ -11,7 +11,7 @@ namespace SRC.Controllers
     [ApiController]
     [Route("api/driver")]
     [Authorize(Roles = "Driver,Admin")]
-    public class DriverProfileController: ControllerBase
+    public class DriverProfileController : ControllerBase
     {
         private readonly IDriverProfileService _service;
 
@@ -24,11 +24,11 @@ namespace SRC.Controllers
         public async Task<ActionResult<DriverProfile>> AddProfile([FromBody] CreateDriverProfileRequestDto request)
         {
             var sub = User.FindFirstValue("sub");
-            if(sub is null) return Unauthorized();
+            if (sub is null) return Unauthorized();
 
 
             var newProfile = await _service.AddProfile(sub, request);
-            if(newProfile is null) return BadRequest();
+            if (newProfile is null) return BadRequest();
             return Ok(newProfile);
         }
 

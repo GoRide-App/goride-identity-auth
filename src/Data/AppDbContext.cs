@@ -4,11 +4,11 @@ using SRC.Enums;
 
 namespace SRC.Data;
 
-public class AppDbContext: DbContext
+public class AppDbContext : DbContext
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options): base(options){}
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-    public DbSet<DriverProfile> DriverProfile {get; set;}
+    public DbSet<DriverProfile> DriverProfile { get; set; }
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

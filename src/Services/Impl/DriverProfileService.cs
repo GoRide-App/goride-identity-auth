@@ -19,7 +19,7 @@ namespace SRC.Services.Impl
         async Task<DriverProfile> IDriverProfileService.AddProfile(string sub, CreateDriverProfileRequestDto request)
         {
             var exists = await _context.DriverProfile.AnyAsync(d => d.DriverId == sub);
-            if(exists) throw new HttpRequestException("A profile already exists for this driver!!!");
+            if (exists) throw new HttpRequestException("A profile already exists for this driver!!!");
 
             var profile = new DriverProfile
             {
@@ -32,7 +32,7 @@ namespace SRC.Services.Impl
                 LicenseExpiry = request.LicenseExpiry,
                 Status = DriverStatus.PendingVerification
             };
-    
+
             _context.DriverProfile.Add(profile);
             await _context.SaveChangesAsync();
             return profile;
@@ -61,10 +61,10 @@ namespace SRC.Services.Impl
 
             if (!isAdmin)
             {
-                if(driver.DriverId != usrSub)
+                if (driver.DriverId != usrSub)
                     throw new UnauthorizedAccessException("You can only update your own vehicle.");
             }
-            
+
             driver.VehicleMake = request.VehicleMake;
             driver.VehicleModel = request.VehicleModel;
             driver.VehiclePlate = request.VehiclePlate;
