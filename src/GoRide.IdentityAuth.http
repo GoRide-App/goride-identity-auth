@@ -41,3 +41,74 @@ POST {{GoRide.IdentityAuth_HostAddress}}/api/account/deactivate
 Content-Type: application/json
 
 { "confirm": true }
+
+### SCRUM-42 — create the driver profile first (Driver session; expect 200, 409 if it exists)
+POST {{GoRide.IdentityAuth_HostAddress}}/api/driver/addProfile
+Cookie: {{sessionCookie}}
+Content-Type: application/json
+
+{
+  "vehicleMake": "Toyota",
+  "vehicleModel": "Aqua",
+  "vehiclePlate": "CAB-1234",
+  "vehicleTypeCode": "car",
+  "licenseNumber": "B1234567",
+  "licenseExpiry": "2030-12-31"
+}
+
+### SCRUM-42 — invalid profile data (expect 400 with field errors, nothing saved)
+POST {{GoRide.IdentityAuth_HostAddress}}/api/driver/addProfile
+Cookie: {{sessionCookie}}
+Content-Type: application/json
+
+{ "vehicleMake": "T", "vehicleModel": "", "vehiclePlate": "AB", "vehicleTypeCode": "car", "licenseNumber": "123", "licenseExpiry": "2020-01-01" }
+
+### SCRUM-42 — upload a document (expect 200; pick a real JPEG/PNG/PDF under 5 MB)
+POST {{GoRide.IdentityAuth_HostAddress}}/api/driver/documents
+Cookie: {{sessionCookie}}
+Content-Type: multipart/form-data; boundary=----GoRide
+
+------GoRide
+Content-Disposition: form-data; name="type"
+
+DrivingLicence
+------GoRide
+Content-Disposition: form-data; name="documentNumber"
+
+B1234567
+------GoRide
+Content-Disposition: form-data; name="expiresOn"
+
+2031-06-30
+------GoRide
+Content-Disposition: form-data; name="file"; filename="licence.jpg"
+Content-Type: image/jpeg
+
+< ./licence.jpg
+------GoRide--
+
+### SCRUM-42 — my profile with documents and verification state (replace {sub} with your user id)
+GET {{GoRide.IdentityAuth_HostAddress}}/api/driver/{sub}
+Cookie: {{sessionCookie}}
+
+### SCRUM-43 — driver: verification state as the app must enforce it
+GET {{GoRide.IdentityAuth_HostAddress}}/api/driver/verification-status
+Cookie: {{sessionCookie}}
+
+### SCRUM-43 — driver: go online (expect 403 until approved, 200 afterwards)
+POST {{GoRide.IdentityAuth_HostAddress}}/api/driver/go-online
+Cookie: {{sessionCookie}}
+
+### SCRUM-43 — admin: approve a driver (Admin session; expect 200, 409 while documents are missing)
+POST {{GoRide.IdentityAuth_HostAddress}}/api/admin/drivers/{driverId}/approve
+Cookie: {{sessionCookie}}
+Content-Type: application/json
+
+{ "reason": "Documents verified" }
+
+### SCRUM-43 — admin: reject a driver with a reason (expect 200; 400 without a reason)
+POST {{GoRide.IdentityAuth_HostAddress}}/api/admin/drivers/{driverId}/reject
+Cookie: {{sessionCookie}}
+Content-Type: application/json
+
+{ "reason": "Insurance policy has expired; upload a current one." }
