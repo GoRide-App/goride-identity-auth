@@ -21,6 +21,7 @@ public static class ServiceExtentions
         });
 
         services.AddScoped<IDriverProfileService, DriverProfileServiceImpl>();
+        services.AddScoped<IDriverVerificationService, DriverVerificationService>();
         services.AddScoped<IAccountDeactivationService, AccountDeactivationService>();
         return services;
     }

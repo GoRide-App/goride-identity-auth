@@ -24,11 +24,11 @@ namespace SRC.Services.Impl
             var profile = new DriverProfile
             {
                 DriverId = sub,
-                VehicleMake = request.VehicleMake,
-                VehicleModel = request.VehicleModel,
-                VehiclePlate = request.VehiclePlate,
-                VehicleTypeCode = request.VehicleTypeCode,
-                LicenseNumber = request.LicenseNumber,
+                VehicleMake = request.VehicleMake.Trim(),
+                VehicleModel = request.VehicleModel.Trim(),
+                VehiclePlate = request.VehiclePlate.Trim().ToUpperInvariant(),
+                VehicleTypeCode = request.VehicleTypeCode.Trim(),
+                LicenseNumber = request.LicenseNumber.Trim(),
                 LicenseExpiry = request.LicenseExpiry,
                 Status = DriverStatus.PendingVerification
             };
@@ -38,38 +38,19 @@ namespace SRC.Services.Impl
             return profile;
         }
 
-        async Task<VehicleDto?> IDriverProfileService.GetVehicleById(string sub)
-        {
-            return await _context.DriverProfile
-                .AsNoTracking()
-                .Where(d => d.DriverId == sub)
-                .Select(d => new VehicleDto
-                {
-                    VehicleMake = d.VehicleMake,
-                    VehicleModel = d.VehicleModel,
-                    VehiclePlate = d.VehiclePlate,
-                    VehicleTypeCode = d.VehicleTypeCode,
-                    LicenseNumber = d.LicenseNumber,
-                    LicenseExpiry = d.LicenseExpiry
-                }).FirstOrDefaultAsync();
-        }
-
         async Task<DriverProfile?> IDriverProfileService.UpdateVehicle(string sub, string usrSub, UpdateVehicleDto request, bool isAdmin)
         {
             var driver = await _context.DriverProfile.FirstOrDefaultAsync(v => v.DriverId == sub);
             if (driver is null) return null;
 
-            if (!isAdmin)
-            {
-                if (driver.DriverId != usrSub)
-                    throw new UnauthorizedAccessException("You can only update your own vehicle.");
-            }
+            if (!isAdmin && driver.DriverId != usrSub)
+                throw new UnauthorizedAccessException("You can only update your own vehicle.");
 
-            driver.VehicleMake = request.VehicleMake;
-            driver.VehicleModel = request.VehicleModel;
-            driver.VehiclePlate = request.VehiclePlate;
-            driver.VehicleTypeCode = request.VehicleTypeCode;
-            driver.LicenseNumber = request.LicenseNumber;
+            driver.VehicleMake = request.VehicleMake.Trim();
+            driver.VehicleModel = request.VehicleModel.Trim();
+            driver.VehiclePlate = request.VehiclePlate.Trim().ToUpperInvariant();
+            driver.VehicleTypeCode = request.VehicleTypeCode.Trim();
+            driver.LicenseNumber = request.LicenseNumber.Trim();
             driver.LicenseExpiry = request.LicenseExpiry;
 
             await _context.SaveChangesAsync();

@@ -10,6 +10,7 @@ public class AppDbContext : DbContext
 
     public DbSet<DriverProfile> DriverProfile { get; set; }
     public DbSet<UserAccount> UserAccounts { get; set; }
+    public DbSet<DriverDocument> DriverDocuments { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -80,6 +81,41 @@ public class AppDbContext : DbContext
                 .ValueGeneratedOnAddOrUpdate();
 
             entity.HasIndex(u => u.Status).HasDatabaseName("ix_user_accounts_status");
+        });
+
+        modelBuilder.Entity<DriverDocument>(entity =>
+        {
+            entity.ToTable("driver_documents");
+
+            entity.HasKey(d => d.Id);
+            entity.Property(d => d.Id).HasColumnName("id");
+
+            // Same type as driverprofiles.driver_id so MySQL accepts the foreign key.
+            entity.Property(d => d.DriverId).HasColumnName("driver_id").HasMaxLength(255);
+
+            entity.Property(d => d.Type)
+                .HasColumnName("document_type")
+                .HasMaxLength(32)
+                .HasConversion(
+                    v => v.ToString().ToLower(),
+                    v => (DriverDocumentType)Enum.Parse(typeof(DriverDocumentType), v, true));
+
+            entity.Property(d => d.FileName).HasColumnName("file_name").HasMaxLength(255);
+            entity.Property(d => d.ContentType).HasColumnName("content_type").HasMaxLength(100);
+            entity.Property(d => d.SizeBytes).HasColumnName("size_bytes");
+            entity.Property(d => d.Content).HasColumnName("content").HasColumnType("longblob");
+            entity.Property(d => d.DocumentNumber).HasColumnName("document_number").HasMaxLength(64);
+            entity.Property(d => d.ExpiresOn).HasColumnName("expires_on");
+            entity.Property(d => d.UploadedAt).HasColumnName("uploaded_at");
+
+            entity.HasIndex(d => new { d.DriverId, d.Type })
+                .IsUnique()
+                .HasDatabaseName("ux_driver_documents_driver_type");
+
+            entity.HasOne<DriverProfile>()
+                .WithMany()
+                .HasForeignKey(d => d.DriverId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }
