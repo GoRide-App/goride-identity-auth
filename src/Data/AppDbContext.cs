@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
     public DbSet<DriverProfile> DriverProfile { get; set; }
     public DbSet<UserAccount> UserAccounts { get; set; }
     public DbSet<DriverDocument> DriverDocuments { get; set; }
+    public DbSet<DriverStatusChange> DriverStatusChanges { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -115,6 +116,40 @@ public class AppDbContext : DbContext
             entity.HasOne<DriverProfile>()
                 .WithMany()
                 .HasForeignKey(d => d.DriverId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<DriverStatusChange>(entity =>
+        {
+            entity.ToTable("driver_status_changes");
+
+            entity.HasKey(c => c.Id);
+            entity.Property(c => c.Id).HasColumnName("id");
+            entity.Property(c => c.DriverId).HasColumnName("driver_id").HasMaxLength(255);
+
+            entity.Property(c => c.FromStatus)
+                .HasColumnName("from_status")
+                .HasMaxLength(32)
+                .HasConversion(
+                    v => v.ToString().ToLower(),
+                    v => (DriverStatus)Enum.Parse(typeof(DriverStatus), v, true));
+
+            entity.Property(c => c.ToStatus)
+                .HasColumnName("to_status")
+                .HasMaxLength(32)
+                .HasConversion(
+                    v => v.ToString().ToLower(),
+                    v => (DriverStatus)Enum.Parse(typeof(DriverStatus), v, true));
+
+            entity.Property(c => c.Reason).HasColumnName("reason").HasMaxLength(500);
+            entity.Property(c => c.ChangedBy).HasColumnName("changed_by").HasMaxLength(64);
+            entity.Property(c => c.ChangedAt).HasColumnName("changed_at");
+
+            entity.HasIndex(c => new { c.DriverId, c.ChangedAt }).HasDatabaseName("ix_driver_status_changes_driver_time");
+
+            entity.HasOne<DriverProfile>()
+                .WithMany()
+                .HasForeignKey(c => c.DriverId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
     }

@@ -9,6 +9,12 @@ namespace SRC.Services.Impl;
 
 public sealed class DriverVerificationService : IDriverVerificationService
 {
+    private const string DocumentsCompleteReason = "Required documents uploaded; awaiting admin review.";
+    private const string DefaultApprovalReason = "Documents verified and registration approved.";
+
+    private static readonly DriverStatus[] ApprovableFrom =
+        [DriverStatus.PendingVerification, DriverStatus.DocumentReview, DriverStatus.Rejected];
+
     private readonly AppDbContext _db;
     private readonly ILogger<DriverVerificationService> _logger;
     private readonly TimeProvider _clock;
@@ -20,15 +26,18 @@ public sealed class DriverVerificationService : IDriverVerificationService
         _clock = clock ?? TimeProvider.System;
     }
 
+    // ------------------------------------------------------------------ profile
+
     public async Task<DriverProfileDto?> GetProfileAsync(string driverId, CancellationToken cancellationToken = default)
     {
         var driver = await _db.DriverProfile.AsNoTracking()
             .SingleOrDefaultAsync(d => d.DriverId == driverId, cancellationToken);
         if (driver is null) return null;
 
-        var documents = await ListDocumentsAsync(driverId, cancellationToken);
-        return ToDto(driver, documents);
+        return await BuildProfileAsync(driver, cancellationToken);
     }
+
+    // ------------------------------------------------------------------ SCRUM-42: documents
 
     public async Task<DocumentUploadResult> UploadDocumentAsync(string driverId, DriverDocumentUpload upload, CancellationToken cancellationToken = default)
     {
@@ -70,7 +79,7 @@ public sealed class DriverVerificationService : IDriverVerificationService
             uploadedTypes.Add(upload.Type);
 
             if (DriverDocumentTypes.RequiredForApproval.All(uploadedTypes.Contains))
-                driver.Status = DriverStatus.DocumentReview;
+                Transition(driver, DriverStatus.DocumentReview, DocumentsCompleteReason, driverId, now);
         }
 
         await _db.SaveChangesAsync(cancellationToken); // one transaction: document + status together
@@ -89,9 +98,127 @@ public sealed class DriverVerificationService : IDriverVerificationService
             .SingleOrDefaultAsync(cancellationToken);
     }
 
-    private Task<List<DriverDocumentDto>> ListDocumentsAsync(string driverId, CancellationToken cancellationToken) =>
-        _db.DriverDocuments.AsNoTracking()
+    // ------------------------------------------------------------------ SCRUM-43: admin decisions
+
+    public async Task<DriverDecisionResult> ApproveAsync(string driverId, string adminId, string? reason, CancellationToken cancellationToken = default)
+    {
+        var driver = await _db.DriverProfile.SingleOrDefaultAsync(d => d.DriverId == driverId, cancellationToken);
+        if (driver is null) return DriverDecisionResult.NotFound();
+
+        if (driver.Status is DriverStatus.Active or DriverStatus.Offline)
+            return DriverDecisionResult.InvalidTransition("This driver is already approved.");
+        if (!ApprovableFrom.Contains(driver.Status))
+            return DriverDecisionResult.InvalidTransition($"Cannot approve a driver whose status is {driver.Status}.");
+
+        var uploaded = await _db.DriverDocuments
             .Where(d => d.DriverId == driverId)
+            .Select(d => d.Type)
+            .ToListAsync(cancellationToken);
+        var missing = DriverDocumentTypes.RequiredForApproval.Where(t => !uploaded.Contains(t)).ToList();
+        if (missing.Count > 0)
+            return DriverDecisionResult.MissingDocuments(missing);
+
+        var now = _clock.GetUtcNow().UtcDateTime;
+        Transition(driver, DriverStatus.Active, string.IsNullOrWhiteSpace(reason) ? DefaultApprovalReason : reason.Trim(), adminId, now);
+        driver.VerifiedAt = now;
+        await _db.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Admin {AdminId} approved driver {DriverId}.", adminId, driverId);
+        return DriverDecisionResult.Applied(await BuildProfileAsync(driver, cancellationToken));
+    }
+
+    public async Task<DriverDecisionResult> RejectAsync(string driverId, string adminId, string reason, CancellationToken cancellationToken = default)
+    {
+        var driver = await _db.DriverProfile.SingleOrDefaultAsync(d => d.DriverId == driverId, cancellationToken);
+        if (driver is null) return DriverDecisionResult.NotFound();
+
+        if (driver.Status == DriverStatus.Rejected)
+            return DriverDecisionResult.InvalidTransition("This driver's registration is already rejected.");
+        if (driver.Status == DriverStatus.Deactivated)
+            return DriverDecisionResult.InvalidTransition("This account is deactivated; there is no registration to reject.");
+
+        var now = _clock.GetUtcNow().UtcDateTime;
+        Transition(driver, DriverStatus.Rejected, reason.Trim(), adminId, now);
+        driver.VerifiedAt = null; // a previously approved driver loses verification immediately
+        await _db.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Admin {AdminId} rejected driver {DriverId}: {Reason}", adminId, driverId, reason);
+        return DriverDecisionResult.Applied(await BuildProfileAsync(driver, cancellationToken));
+    }
+
+    // ------------------------------------------------------------------ SCRUM-43: enforcement
+
+    public async Task<DriverStateEnforcementResponseDto?> GetEnforcementStateAsync(string driverId, CancellationToken cancellationToken = default)
+    {
+        var driver = await _db.DriverProfile.AsNoTracking()
+            .SingleOrDefaultAsync(d => d.DriverId == driverId, cancellationToken);
+        if (driver is null) return null;
+
+        return ToEnforcement(driver, await LatestReasonAsync(driverId, cancellationToken));
+    }
+
+    public async Task<DriverOnlineResult?> GoOnlineAsync(string driverId, CancellationToken cancellationToken = default)
+    {
+        var driver = await _db.DriverProfile.SingleOrDefaultAsync(d => d.DriverId == driverId, cancellationToken);
+        if (driver is null) return null;
+
+        var reason = await LatestReasonAsync(driverId, cancellationToken);
+
+        // Scenario 2: the state saved by the admin is what decides, every time.
+        if (driver.Status is not (DriverStatus.Active or DriverStatus.Offline))
+            return new DriverOnlineResult(Allowed: false, ToEnforcement(driver, reason));
+
+        if (driver.Status == DriverStatus.Offline)
+        {
+            driver.Status = DriverStatus.Active;
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+
+        return new DriverOnlineResult(Allowed: true, ToEnforcement(driver, reason));
+    }
+
+    public async Task<DriverOnlineResult?> GoOfflineAsync(string driverId, CancellationToken cancellationToken = default)
+    {
+        var driver = await _db.DriverProfile.SingleOrDefaultAsync(d => d.DriverId == driverId, cancellationToken);
+        if (driver is null) return null;
+
+        if (driver.Status == DriverStatus.Active)
+        {
+            driver.Status = DriverStatus.Offline;
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+
+        return new DriverOnlineResult(Allowed: true, ToEnforcement(driver, await LatestReasonAsync(driverId, cancellationToken)));
+    }
+
+    // ------------------------------------------------------------------ helpers
+
+    private void Transition(DriverProfile driver, DriverStatus to, string reason, string changedBy, DateTime at)
+    {
+        _db.DriverStatusChanges.Add(new DriverStatusChange
+        {
+            DriverId = driver.DriverId,
+            FromStatus = driver.Status,
+            ToStatus = to,
+            Reason = reason,
+            ChangedBy = changedBy,
+            ChangedAt = at
+        });
+        driver.Status = to;
+    }
+
+    private Task<string?> LatestReasonAsync(string driverId, CancellationToken cancellationToken) =>
+        _db.DriverStatusChanges.AsNoTracking()
+            .Where(c => c.DriverId == driverId)
+            .OrderByDescending(c => c.ChangedAt)
+            .ThenByDescending(c => c.Id)
+            .Select(c => c.Reason)
+            .FirstOrDefaultAsync(cancellationToken);
+
+    private async Task<DriverProfileDto> BuildProfileAsync(DriverProfile driver, CancellationToken cancellationToken)
+    {
+        var documents = await _db.DriverDocuments.AsNoTracking()
+            .Where(d => d.DriverId == driver.DriverId)
             .OrderBy(d => d.Type)
             .Select(d => new DriverDocumentDto
             {
@@ -107,7 +234,10 @@ public sealed class DriverVerificationService : IDriverVerificationService
             })
             .ToListAsync(cancellationToken);
 
-    internal static DriverProfileDto ToDto(DriverProfile driver, IReadOnlyList<DriverDocumentDto> documents)
+        return ToDto(driver, documents, await LatestReasonAsync(driver.DriverId, cancellationToken));
+    }
+
+    internal static DriverProfileDto ToDto(DriverProfile driver, IReadOnlyList<DriverDocumentDto> documents, string? statusReason)
     {
         var uploaded = documents.Select(d => d.Type).ToHashSet();
         return new DriverProfileDto
@@ -120,6 +250,7 @@ public sealed class DriverVerificationService : IDriverVerificationService
             LicenseNumber = driver.LicenseNumber,
             LicenseExpiry = driver.LicenseExpiry,
             Status = driver.Status,
+            StatusReason = statusReason,
             VerifiedAt = driver.VerifiedAt,
             CanAcceptTrips = driver.Status == DriverStatus.Active,
             Documents = documents,
@@ -128,6 +259,25 @@ public sealed class DriverVerificationService : IDriverVerificationService
             UpdatedAt = driver.UpdatedAt
         };
     }
+
+    internal static DriverStateEnforcementResponseDto ToEnforcement(DriverProfile driver, string? statusReason) => new()
+    {
+        DriverId = driver.DriverId,
+        Status = driver.Status,
+        StatusReason = statusReason,
+        CanAcceptTrips = driver.Status == DriverStatus.Active,
+        Message = driver.Status switch
+        {
+            DriverStatus.Active => "You are online and can accept trips.",
+            DriverStatus.Offline => "You are approved and currently offline.",
+            DriverStatus.PendingVerification => "Upload your driving licence, vehicle registration and insurance; an admin must approve your registration before you can go online.",
+            DriverStatus.DocumentReview => "Your documents are being reviewed. You can go online once an admin approves your registration.",
+            DriverStatus.Rejected => "Your registration was rejected" + (statusReason is null ? "." : $": {statusReason}") + " Fix the issue and re-upload your documents.",
+            DriverStatus.Suspended => "Your driver account is suspended" + (statusReason is null ? "." : $": {statusReason}"),
+            DriverStatus.Deactivated => "This account has been deactivated.",
+            _ => "Your driver account is not able to accept trips."
+        }
+    };
 
     private static DriverDocumentDto ToDto(DriverDocument d) => new()
     {

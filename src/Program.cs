@@ -282,17 +282,27 @@ app.MapGet("/logout", () =>
             [CookieAuthenticationDefaults.AuthenticationScheme, OpenIdConnectDefaults.AuthenticationScheme]
         ));
 
-app.MapGet("/api/me", (ClaimsPrincipal user) =>
+app.MapGet("/api/me", async (ClaimsPrincipal user, AppDbContext db, CancellationToken cancellationToken) =>
 {
     if (!user.Identity!.IsAuthenticated) return Results.Unauthorized();
 
+    var sub = user.FindFirstValue("sub");
+
+    // SCRUM-43: read from the database on every call so an admin decision is enforced on the
+    // driver's very next request, not on their next login.
+    var driverStatus = await db.DriverProfile.AsNoTracking()
+        .Where(d => d.DriverId == sub)
+        .Select(d => (SRC.Enums.DriverStatus?)d.Status)
+        .FirstOrDefaultAsync(cancellationToken);
+
     return Results.Ok(new
     {
-        userId = user.FindFirstValue("sub"),
+        userId = sub,
         name = user.FindFirstValue("username"),
         email = user.FindFirstValue("email"),
         phone_number = user.FindFirstValue("phone_number"),
         roles = user.FindAll("roles").Select(c => c.Value),
+        driverStatus,
     });
 }).RequireAuthorization();
 

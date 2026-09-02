@@ -144,6 +144,54 @@ namespace SRC.Controllers
 
             return File(document.Content, document.ContentType, document.FileName);
         }
+
+        /// <summary>
+        /// The caller's verification state as the app must enforce it (SCRUM-43): status, the
+        /// reason recorded with the latest change, and whether trips can be accepted.
+        /// </summary>
+        [HttpGet("verification-status")]
+        [ProducesResponseType(typeof(DriverStateEnforcementResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<DriverStateEnforcementResponseDto>> GetVerificationStatus(CancellationToken cancellationToken)
+        {
+            var sub = User.FindFirstValue("sub");
+            if (sub is null) return Unauthorized();
+
+            var state = await _verification.GetEnforcementStateAsync(sub, cancellationToken);
+            return state is null ? NotFound() : Ok(state);
+        }
+
+        /// <summary>
+        /// Go online to accept trips. Only an approved driver (Active or Offline) may; every other
+        /// state is refused with 403 and the body explains why, e.g. the rejection reason.
+        /// </summary>
+        [HttpPost("go-online")]
+        [ProducesResponseType(typeof(DriverStateEnforcementResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(DriverStateEnforcementResponseDto), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<DriverStateEnforcementResponseDto>> GoOnline(CancellationToken cancellationToken)
+        {
+            var sub = User.FindFirstValue("sub");
+            if (sub is null) return Unauthorized();
+
+            var result = await _verification.GoOnlineAsync(sub, cancellationToken);
+            if (result is null) return NotFound();
+
+            return result.Allowed ? Ok(result.State) : StatusCode(StatusCodes.Status403Forbidden, result.State);
+        }
+
+        /// <summary>Go offline. Always succeeds for an existing driver profile.</summary>
+        [HttpPost("go-offline")]
+        [ProducesResponseType(typeof(DriverStateEnforcementResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<DriverStateEnforcementResponseDto>> GoOffline(CancellationToken cancellationToken)
+        {
+            var sub = User.FindFirstValue("sub");
+            if (sub is null) return Unauthorized();
+
+            var result = await _verification.GoOfflineAsync(sub, cancellationToken);
+            return result is null ? NotFound() : Ok(result.State);
+        }
     }
 
     internal static class DriverDocumentValidatorLimits

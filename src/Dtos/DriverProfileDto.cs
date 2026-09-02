@@ -14,6 +14,10 @@ public class DriverProfileDto
     public DateOnly LicenseExpiry { get; set; }
 
     public DriverStatus Status { get; set; }
+
+    /// <summary>Reason recorded with the most recent status change (admin decision or document review).</summary>
+    public string? StatusReason { get; set; }
+
     public DateTime? VerifiedAt { get; set; }
 
     /// <summary>True only while the driver is approved and online.</summary>
