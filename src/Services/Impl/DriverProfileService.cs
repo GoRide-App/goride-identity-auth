@@ -54,6 +54,33 @@ namespace SRC.Services.Impl
                 }).FirstOrDefaultAsync();
         }
 
+        async Task<DriverProfile?> IDriverProfileService.updateStatus(string driverSub, int statusNum)
+        {
+            var driver = await _context.DriverProfile.FirstOrDefaultAsync(v => v.DriverId == driverSub);
+            if (driver is null) return null;
+
+            Dictionary<int, DriverStatus> pairs = new()
+            {
+                { 0, DriverStatus.PendingVerification },
+                { 1, DriverStatus.DocumentReview },
+                { 2, DriverStatus.Rejected },
+                { 3, DriverStatus.Suspended },
+                { 4, DriverStatus.Deactivated },
+                { 5, DriverStatus.Active },
+                { 6, DriverStatus.Offline }
+            };
+            
+            if(statusNum < 0 || statusNum > 6) throw new Exception("Invalid driver status number");
+
+            if(pairs.TryGetValue(statusNum, out DriverStatus status))
+            {
+                driver.Status = status;
+            }
+
+            await _context.SaveChangesAsync();
+            return driver;
+        }
+
         async Task<DriverProfile?> IDriverProfileService.UpdateVehicle(string sub, string usrSub, UpdateVehicleDto request, bool isAdmin)
         {
             var driver = await _context.DriverProfile.FirstOrDefaultAsync(v => v.DriverId == sub);

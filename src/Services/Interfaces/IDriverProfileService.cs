@@ -7,5 +7,6 @@ public interface IDriverProfileService
 {
     Task<DriverProfile> AddProfile(string sub, CreateDriverProfileRequestDto request);
     Task<VehicleDto?> GetVehicleById(string sub);
+    Task<DriverProfile?> updateStatus(string driverSub, int statusNum);
     Task<DriverProfile?> UpdateVehicle(string driverSub, string usrSub, UpdateVehicleDto request, bool isAdmin);
 }

@@ -10,6 +10,8 @@ public class AppDbContext : DbContext
 
     public DbSet<DriverProfile> DriverProfile { get; set; }
 
+    public DbSet<AdminActionAudit> AdminActionAudits {get; set;}
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -46,6 +48,14 @@ public class AppDbContext : DbContext
                 .HasColumnType("timestamp")
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .ValueGeneratedOnAddOrUpdate();
+        });
+
+        modelBuilder.Entity<AdminActionAudit>(entity =>
+        {
+            entity.Property(d => d.TimeStampUtc)
+                .HasColumnType("timestamp")
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .ValueGeneratedOnUpdate();
         });
     }
 }
