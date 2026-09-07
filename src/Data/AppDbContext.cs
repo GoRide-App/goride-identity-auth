@@ -55,7 +55,7 @@ public class AppDbContext : DbContext
             entity.Property(d => d.TimeStampUtc)
                 .HasColumnType("timestamp")
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                .ValueGeneratedOnUpdate();
+                .ValueGeneratedOnAddOrUpdate();
         });
     }
 }

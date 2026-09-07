@@ -25,7 +25,7 @@ namespace SRC.Controllers
             var usrSub = User.FindFirstValue("sub");
             if (usrSub is null) return Unauthorized();
 
-            var profile = await _adminAuditLog.updateStatus(driverSub, statusNum);
+            var profile = await _adminAuditLog.updateStatus(driverSub, statusNum, usrSub);
             return profile is null ? NotFound() : Ok(profile);
         }
 

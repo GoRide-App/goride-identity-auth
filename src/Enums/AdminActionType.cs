@@ -2,9 +2,11 @@ namespace SRC.Enums;
 
 public enum AdminActionType
 {
-    APPROVED,
+    SET_PENDING_VERIFICATION,
+    SET_DOCUMENT_REVIEW,
     REJECTED,
-    SUSPEND,
+    SUSPENDED,
     DEACTIVATED,
-    REACTIVATED
+    ACTIVATED,
+    SET_OFFLINE
 }

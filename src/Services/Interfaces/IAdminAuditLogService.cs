@@ -5,5 +5,5 @@ namespace SRC.Services.Interfaces;
 public interface IAdminAuditLogService
 {
     Task<List<DriverProfile>> getAllProfiles();
-    Task<DriverProfile?> updateStatus(string driverSub, int statusNum);
+    Task<DriverProfile?> updateStatus(string driverSub, int statusNum, string usrSub);
 }

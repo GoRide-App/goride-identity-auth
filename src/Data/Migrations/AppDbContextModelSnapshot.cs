@@ -40,9 +40,11 @@ namespace GoRide.IdentityAuth.Data.Migrations
                         .HasColumnType("longtext");
 
                     b.Property<DateTime>("TimeStampUtc")
-                        .ValueGeneratedOnUpdate()
+                        .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("timestamp")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlComputedColumn(b.Property<DateTime>("TimeStampUtc"));
 
                     b.HasKey("Id");
 

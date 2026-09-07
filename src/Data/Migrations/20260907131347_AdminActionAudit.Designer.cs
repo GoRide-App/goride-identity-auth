@@ -12,7 +12,7 @@ using SRC.Data;
 namespace GoRide.IdentityAuth.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260906134900_AdminActionAudit")]
+    [Migration("20260907131347_AdminActionAudit")]
     partial class AdminActionAudit
     {
         /// <inheritdoc />
@@ -43,9 +43,11 @@ namespace GoRide.IdentityAuth.Data.Migrations
                         .HasColumnType("longtext");
 
                     b.Property<DateTime>("TimeStampUtc")
-                        .ValueGeneratedOnUpdate()
+                        .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("timestamp")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlComputedColumn(b.Property<DateTime>("TimeStampUtc"));
 
                     b.HasKey("Id");
 
