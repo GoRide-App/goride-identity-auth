@@ -4,11 +4,20 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using SRC;
 using SRC.Data;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Ensure ASP.NET Core respects X-Forwarded-Proto (HTTPS) from Azure Container Apps ingress
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 // Add services to the container.
 
@@ -141,10 +150,16 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("frontend", policy =>
-        policy.WithOrigins("http://localhost:3000", "https://goride-demo.vercel.app")
+    {
+        var allowedOrigins = builder.Configuration["AllowedOrigins"]?.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            ?? new[] { "http://localhost:3000", "https://goride-demo.vercel.app" };
+
+        policy.WithOrigins(allowedOrigins)
+              .SetIsOriginAllowedToAllowWildcardSubdomains()
               .AllowAnyHeader()
               .AllowAnyMethod()
-              .AllowCredentials());
+              .AllowCredentials();
+    });
 });
 
 
@@ -166,6 +181,7 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 
 
+app.UseForwardedHeaders();
 app.UseCors("frontend");
 app.UseAuthentication();
 app.UseAuthorization();
@@ -185,9 +201,9 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi().AllowAnonymous(); // so you can still browse API docs
 }
 
-app.MapGet("/logout", () =>
+app.MapGet("/logout", (string? returnUrl) =>
         Results.SignOut(
-            new AuthenticationProperties { RedirectUri = "http://localhost:3000" },
+            new AuthenticationProperties { RedirectUri = returnUrl ?? "http://localhost:3000" },
             [CookieAuthenticationDefaults.AuthenticationScheme, OpenIdConnectDefaults.AuthenticationScheme]
         ));
 
