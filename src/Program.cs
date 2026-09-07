@@ -98,7 +98,7 @@ builder.Services.AddAuthentication(options =>
 })
 .AddOpenIdConnect(options =>
 {
-    options.Authority = "https://api.asgardeo.io/t/goride/oauth2/token";
+    options.Authority = "https://api.asgardeo.io/t/goride";
     options.ClientId = builder.Configuration["Asgardeo:ClientId"];
     options.ClientSecret = builder.Configuration["Asgardeo:ClientSecret"];
     options.ResponseType = "code";
