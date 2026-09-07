@@ -187,7 +187,7 @@ if (app.Environment.IsDevelopment())
 
 app.MapGet("/logout", () =>
         Results.SignOut(
-            new AuthenticationProperties { RedirectUri = "http://localhost:3000" },
+            new AuthenticationProperties { RedirectUri = builder.Configuration["Redirect:url"] ?? "http://localhost:3000" },
             [CookieAuthenticationDefaults.AuthenticationScheme, OpenIdConnectDefaults.AuthenticationScheme]
         ));
 
