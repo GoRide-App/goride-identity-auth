@@ -141,7 +141,7 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("frontend", policy =>
-        policy.WithOrigins("http://localhost:3000")
+        policy.WithOrigins("http://localhost:3000", "https://goride-demo.vercel.app")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials());
