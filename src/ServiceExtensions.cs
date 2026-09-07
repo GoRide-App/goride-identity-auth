@@ -11,6 +11,7 @@ public static class ServiceExtentions
         services.AddHttpClient<IProfileService, ProfileServiceImpl>();
         services.AddHttpClient<IUserDirectoryService, UserDirectoryServiceImpl>();
         services.AddScoped<IDriverProfileService, DriverProfileServiceImpl>();
+        services.AddScoped<IAdminAuditLogService, AdminAuditLogServiceImpl>();
         return services;
     }
 }

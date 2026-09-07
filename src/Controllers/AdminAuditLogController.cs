@@ -12,11 +12,11 @@ namespace SRC.Controllers
     public class AdminAuditLogController : ControllerBase
     {
 
-        private readonly IDriverProfileService _driverProfService;
+        private readonly IAdminAuditLogService _adminAuditLog;
 
-        public AdminAuditLogController(IDriverProfileService driverProfService)
+        public AdminAuditLogController(IAdminAuditLogService adminAuditLog)
         {
-            _driverProfService = driverProfService;
+            _adminAuditLog = adminAuditLog;
         }
 
         [HttpPut("{driverSub}/{statusNum}")]
@@ -25,7 +25,7 @@ namespace SRC.Controllers
             var usrSub = User.FindFirstValue("sub");
             if (usrSub is null) return Unauthorized();
 
-            var profile = await _driverProfService.updateStatus(driverSub, statusNum);
+            var profile = await _adminAuditLog.updateStatus(driverSub, statusNum);
             return profile is null ? NotFound() : Ok(profile);
         }
 
@@ -35,7 +35,7 @@ namespace SRC.Controllers
             var usrSub = User.FindFirstValue("sub");
             if (usrSub is null) return Unauthorized();
 
-            var profiles = await _driverProfService.getAllProfiles();
+            var profiles = await _adminAuditLog.getAllProfiles();
             return profiles is null ? NotFound() : Ok(profiles);
         } 
     }
