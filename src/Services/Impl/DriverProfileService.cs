@@ -38,6 +38,11 @@ namespace SRC.Services.Impl
             return profile;
         }
 
+        async Task<List<DriverProfile>> IDriverProfileService.getAllProfiles()
+        {
+            return await _context.DriverProfile.ToListAsync();
+        }
+
         async Task<VehicleDto?> IDriverProfileService.GetVehicleById(string sub)
         {
             return await _context.DriverProfile

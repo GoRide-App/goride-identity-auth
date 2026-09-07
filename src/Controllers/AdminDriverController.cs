@@ -28,5 +28,15 @@ namespace SRC.Controllers
             var profile = await _driverProfService.updateStatus(driverSub, statusNum);
             return profile is null ? NotFound() : Ok(profile);
         }
+
+        [HttpGet]
+        public async Task<ActionResult<List<DriverProfile>>> getDrivers()
+        {
+            var usrSub = User.FindFirstValue("sub");
+            if (usrSub is null) return Unauthorized();
+
+            var profiles = await _driverProfService.getAllProfiles();
+            return profiles is null ? NotFound() : Ok(profiles);
+        } 
     }
 }
