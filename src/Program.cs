@@ -210,6 +210,7 @@ app.MapGet("/logout", (string? returnUrl) =>
 
 app.MapGet("/api/me", (ClaimsPrincipal user) =>
 {
+    Console.WriteLine("\napi/me called!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
     if (!user.Identity!.IsAuthenticated) return Results.Unauthorized();
 
 
