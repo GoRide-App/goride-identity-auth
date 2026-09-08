@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using SRC;
 using SRC.Data;
@@ -12,6 +13,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 builder.Services.AddAuthentication(options =>
 {
@@ -165,7 +172,7 @@ var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 
-
+app.UseForwardedHeaders(); 
 app.UseCors("frontend");
 app.UseAuthentication();
 app.UseAuthorization();
@@ -187,7 +194,7 @@ if (app.Environment.IsDevelopment())
 
 app.MapGet("/logout", () =>
         Results.SignOut(
-            new AuthenticationProperties { RedirectUri = builder.Configuration["Redirect:url"] ?? "http://localhost:3000" },
+            new AuthenticationProperties { RedirectUri = builder.Configuration["Redirect:url"] ?? throw new InvalidOperationException("Redirect:url is not configured") },
             [CookieAuthenticationDefaults.AuthenticationScheme, OpenIdConnectDefaults.AuthenticationScheme]
         ));
 
