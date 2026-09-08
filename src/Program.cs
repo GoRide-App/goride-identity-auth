@@ -152,7 +152,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("frontend", policy =>
     {
         var allowedOrigins = builder.Configuration["AllowedOrigins"]?.Split(',', StringSplitOptions.RemoveEmptyEntries)
-            ?? new[] { "http://localhost:3000", "https://goride-demo.vercel.app" };
+            ?? new[] { "http://localhost:3000", "https://goride-demo.vercel.app", "https://goride-my-client.vercel.app" };
 
         policy.WithOrigins(allowedOrigins)
               .SetIsOriginAllowedToAllowWildcardSubdomains()
