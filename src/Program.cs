@@ -203,7 +203,7 @@ if (app.Environment.IsDevelopment())
 
 app.MapGet("/logout", (string? returnUrl) =>
         Results.SignOut(
-            new AuthenticationProperties { RedirectUri = returnUrl ?? "http://localhost:3000" },
+            new AuthenticationProperties { RedirectUri = returnUrl ?? "https://goride-my-client.vercel.app" },
             [CookieAuthenticationDefaults.AuthenticationScheme, OpenIdConnectDefaults.AuthenticationScheme]
         ));
 
