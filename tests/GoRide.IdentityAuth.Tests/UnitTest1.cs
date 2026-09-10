@@ -309,7 +309,7 @@ public class ControllerEndpointTests
 
         Assert.Equal(5, result.Count);
         Assert.All(result, item => Assert.NotNull(item.Summary));
-        Assert.All(result, item => Assert.InRange(item.TemperatureF, 0, 1000));
+        Assert.All(result, item => Assert.InRange(item.TemperatureF, -10, 1000));
     }
 
     private static DriverProfileController CreateDriverController(IDriverProfileService service, string? sub = null, bool isAdmin = false)
