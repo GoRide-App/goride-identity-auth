@@ -15,7 +15,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-    options.KnownNetworks.Clear();
+    options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
 });
 
@@ -32,7 +32,7 @@ builder.Services.AddAuthentication(options =>
     options.Cookie.Name = "app_session";
     options.Cookie.HttpOnly = true;
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-    options.Cookie.SameSite = SameSiteMode.None; // frontend and backend are different origins in dev
+    options.Cookie.SameSite = SameSiteMode.Lax; // frontend and backend are different origins in dev
     options.ExpireTimeSpan = TimeSpan.FromHours(8);
     options.SlidingExpiration = true;
 
@@ -46,8 +46,6 @@ builder.Services.AddAuthentication(options =>
         context.Response.StatusCode = StatusCodes.Status403Forbidden;
         return Task.CompletedTask;
     };
-
-
 
     options.Events.OnValidatePrincipal = async context =>
     {
@@ -127,10 +125,18 @@ builder.Services.AddAuthentication(options =>
 
     options.Events.OnRedirectToIdentityProvider = context =>
     {
+        context.ProtocolMessage.RedirectUri = $"{builder.Configuration["Frontend:BaseUrl"]}/signin-oidc";
+
         if (context.Properties.Items.TryGetValue("forceFresh", out var forceFresh) && forceFresh == "true")
         {
             context.ProtocolMessage.Prompt = "login";
         }
+        return Task.CompletedTask;
+    };
+
+    options.Events.OnRedirectToIdentityProviderForSignOut = context =>
+    {
+        context.ProtocolMessage.PostLogoutRedirectUri = $"{builder.Configuration["Frontend:BaseUrl"]}/signout-callback-oidc";
         return Task.CompletedTask;
     };
 });
@@ -180,49 +186,15 @@ var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 
-
 app.UseForwardedHeaders();
 app.UseCors("frontend");
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/login", (string? returnUrl, string? prompt) =>
-{
-    var properties = new AuthenticationProperties { RedirectUri = returnUrl ?? "http://localhost:3000" };
-    if (prompt == "login")
-    {
-        properties.Items["forceFresh"] = "true";
-    }
-    return Results.Challenge(properties, [OpenIdConnectDefaults.AuthenticationScheme]);
-}).AllowAnonymous();
-
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi().AllowAnonymous(); // so you can still browse API docs
 }
-
-app.MapGet("/logout", (string? returnUrl) =>
-        Results.SignOut(
-            new AuthenticationProperties { RedirectUri = returnUrl ?? "https://goride-my-client.vercel.app" },
-            [CookieAuthenticationDefaults.AuthenticationScheme, OpenIdConnectDefaults.AuthenticationScheme]
-        ));
-
-
-app.MapGet("/api/me", (ClaimsPrincipal user) =>
-{
-    Console.WriteLine("\napi/me called!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-    if (!user.Identity!.IsAuthenticated) return Results.Unauthorized();
-
-
-    return Results.Ok(new
-    {
-        userId = user.FindFirstValue("sub"),
-        name = user.FindFirstValue("username"),
-        email = user.FindFirstValue("email"),
-        phone_number = user.FindFirstValue("phone_number"),
-        roles = user.FindAll("roles").Select(c => c.Value),
-    });
-}).RequireAuthorization();
 
 app.MapGet("/api/admin-check", () => Results.Ok(new { message = "You're an admin" }))
    .RequireAuthorization(policy => policy.RequireRole("Admin"));
