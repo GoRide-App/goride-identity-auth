@@ -37,14 +37,5 @@ namespace SRC.Controllers
             }
             return Challenge(properties, [OpenIdConnectDefaults.AuthenticationScheme]);
         }
-
-        [HttpGet("logout")]
-        public ActionResult Logout(string? returnUrl)
-        {
-            return SignOut(
-                new AuthenticationProperties { RedirectUri = returnUrl ?? "https://goride-my-client.vercel.app" },
-                [CookieAuthenticationDefaults.AuthenticationScheme, OpenIdConnectDefaults.AuthenticationScheme]
-            );
-        }
     }
 }
