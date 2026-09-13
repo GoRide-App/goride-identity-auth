@@ -20,23 +20,30 @@ namespace SRC.Controllers
         }
 
         [HttpPut("{driverSub}/{statusNum}")]
-        public async Task<ActionResult<DriverProfile>> updateDriverStatus(string driverSub,int statusNum)
+        public async Task<ActionResult<DriverProfile>> UpdateDriverStatus(string driverSub,int statusNum)
         {
             var usrSub = User.FindFirstValue("sub");
             if (usrSub is null) return Unauthorized();
 
-            var profile = await _adminAuditLog.updateStatus(driverSub, statusNum, usrSub);
+            var profile = await _adminAuditLog.UpdateStatus(driverSub, statusNum, usrSub);
             return profile is null ? NotFound() : Ok(profile);
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<DriverProfile>>> getDrivers()
+        public async Task<ActionResult<List<DriverProfile>>> GetDrivers()
         {
             var usrSub = User.FindFirstValue("sub");
             if (usrSub is null) return Unauthorized();
 
-            var profiles = await _adminAuditLog.getAllProfiles();
+            var profiles = await _adminAuditLog.GetAllProfiles();
             return profiles is null ? NotFound() : Ok(profiles);
         } 
+
+        [HttpGet("getLogs")]
+        public async Task<ActionResult<List<AdminActionAudit>>> GetLogs()
+        {
+            var logs = await _adminAuditLog.GetAdminLogs();
+            return logs is null ? NotFound() : Ok(logs);
+        }
     }
 }
