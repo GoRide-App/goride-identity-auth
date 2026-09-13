@@ -44,6 +44,7 @@ Still from `goride-identity-auth/src`, set each of the following (ask a
 teammate / check the Asgardeo console for the real values):
 
 ```bash
+dotnet user-secrets set "Frontend:BaseUrl" "<forntend_url>"
 dotnet user-secrets set "Asgardeo:ClientId" "<value>"
 dotnet user-secrets set "Asgardeo:ClientSecret" "<value>"
 dotnet user-secrets set "AsgardeoMgmt:ClientId" "<value>"
