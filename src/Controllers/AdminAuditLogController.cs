@@ -20,7 +20,7 @@ namespace SRC.Controllers
         }
 
         [HttpPut("{driverSub}/{statusNum}")]
-        public async Task<ActionResult<DriverProfile>> updateDriverStatus(string driverSub,int statusNum)
+        public async Task<ActionResult<DriverProfile>> UpdateDriverStatus(string driverSub,int statusNum)
         {
             var usrSub = User.FindFirstValue("sub");
             if (usrSub is null) return Unauthorized();
@@ -30,7 +30,7 @@ namespace SRC.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<DriverProfile>>> getDrivers()
+        public async Task<ActionResult<List<DriverProfile>>> GetDrivers()
         {
             var usrSub = User.FindFirstValue("sub");
             if (usrSub is null) return Unauthorized();

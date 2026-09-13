@@ -199,7 +199,11 @@ if (app.Environment.IsDevelopment())
 app.MapGet("/api/admin-check", () => Results.Ok(new { message = "You're an admin" }))
    .RequireAuthorization(policy => policy.RequireRole("Admin"));
 
-
+app.MapGet("/logout", () =>
+        Results.SignOut(
+            new AuthenticationProperties { RedirectUri = builder.Configuration["Frontend:BaseUrl"] },
+            [CookieAuthenticationDefaults.AuthenticationScheme, OpenIdConnectDefaults.AuthenticationScheme]
+));
 
 app.UseHttpsRedirection();
 
