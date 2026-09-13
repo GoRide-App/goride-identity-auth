@@ -1,6 +1,8 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using SRC.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace SRC.Services.Impl
 {
@@ -8,11 +10,13 @@ namespace SRC.Services.Impl
     {
         private readonly HttpClient _http;
         private readonly IConfiguration _config;
+        private readonly AppDbContext _context;
 
-        public UserDirectoryServiceImpl(HttpClient http, IConfiguration config)
+        public UserDirectoryServiceImpl(HttpClient http, IConfiguration config, AppDbContext context)
         {
             _http = http;
             _config = config;
+            _context = context;
         }
 
         private async Task<string> GetManagementTokenAsync()
@@ -48,8 +52,13 @@ namespace SRC.Services.Impl
             var response = await _http.SendAsync(request);
             var body = await response.Content.ReadAsStringAsync();
 
-            if (!response.IsSuccessStatusCode)
-                throw new HttpRequestException($"Asgardeo user lookup failed ({(int)response.StatusCode}): {body}");
+            if (!response.IsSuccessStatusCode){
+                var driver = await _context.DriverProfile.FirstOrDefaultAsync(v => v.DriverId == userId);
+                if(driver is not null)
+                    _context.DriverProfile.Remove(driver);
+                await _context.SaveChangesAsync();
+                throw new HttpRequestException($"Asgardeo user lookup failed and user got deleted from system DB!! ({(int)response.StatusCode}): {body}");
+            }
 
             return body;
         }
