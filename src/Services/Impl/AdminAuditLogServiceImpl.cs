@@ -15,12 +15,17 @@ namespace SRC.Services.Impl
             _context = context;
         }
 
-        async Task<List<DriverProfile>> IAdminAuditLogService.getAllProfiles()
+        async Task<List<AdminActionAudit>> IAdminAuditLogService.GetAdminLogs()
+        {
+            return await _context.AdminActionAudits.ToListAsync();
+        }
+
+        async Task<List<DriverProfile>> IAdminAuditLogService.GetAllProfiles()
         {
             return await _context.DriverProfile.ToListAsync();
         }
 
-        async Task<DriverProfile?> IAdminAuditLogService.updateStatus(string driverSub, int statusNum, string adminSub)
+        async Task<DriverProfile?> IAdminAuditLogService.UpdateStatus(string driverSub, int statusNum, string adminSub)
         {
 
             Dictionary<int, AdminActionType> pairs_a = new()

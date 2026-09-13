@@ -25,7 +25,7 @@ namespace SRC.Controllers
             var usrSub = User.FindFirstValue("sub");
             if (usrSub is null) return Unauthorized();
 
-            var profile = await _adminAuditLog.updateStatus(driverSub, statusNum, usrSub);
+            var profile = await _adminAuditLog.UpdateStatus(driverSub, statusNum, usrSub);
             return profile is null ? NotFound() : Ok(profile);
         }
 
@@ -35,8 +35,15 @@ namespace SRC.Controllers
             var usrSub = User.FindFirstValue("sub");
             if (usrSub is null) return Unauthorized();
 
-            var profiles = await _adminAuditLog.getAllProfiles();
+            var profiles = await _adminAuditLog.GetAllProfiles();
             return profiles is null ? NotFound() : Ok(profiles);
         } 
+
+        [HttpGet("getLogs")]
+        public async Task<ActionResult<List<AdminActionAudit>>> GetLogs()
+        {
+            var logs = await _adminAuditLog.GetAdminLogs();
+            return logs is null ? NotFound() : Ok(logs);
+        }
     }
 }
