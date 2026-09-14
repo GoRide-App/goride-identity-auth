@@ -171,7 +171,8 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddControllers();
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+// var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var connectionString = builder.Configuration["ConnectionStrings:DefaultConnection"];
 var serverVersion = ServerVersion.AutoDetect(connectionString);
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(connectionString, serverVersion));
