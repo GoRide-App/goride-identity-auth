@@ -147,7 +147,7 @@ public class ControllerEndpointTests
 
         var result = await controller.GetUserBySub("user-123", "wrong-key");
 
-        Assert.IsType<UnauthorizedResult>(result);
+        Assert.IsType<UnauthorizedObjectResult>(result);
     }
 
     [Fact]
