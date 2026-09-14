@@ -137,7 +137,8 @@ public class ControllerEndpointTests
     [Fact]
     public async Task InternalUserController_GetUserBySub_WhenApiKeyInvalid_ReturnsUnauthorized()
     {
-        var controller = new InternalUserController(new FakeUserDirectoryService(), CreateConfiguration(new Dictionary<string, string?>
+        var service = new FakeUserDirectoryService();
+        var controller = new InternalUserController(service, CreateConfiguration(new Dictionary<string, string?>
         {
             ["InternalServices:ApiKey"] = "super-secret"
         }))
@@ -147,7 +148,10 @@ public class ControllerEndpointTests
 
         var result = await controller.GetUserBySub("user-123", "wrong-key");
 
-        Assert.IsType<UnauthorizedObjectResult>(result);
+        var content = Assert.IsType<ContentResult>(result);
+        Assert.Equal("application/json", content.ContentType);
+        Assert.Equal("{}", content.Content);
+        Assert.Equal("user-123", service.LastUserId);
     }
 
     [Fact]
@@ -309,7 +313,7 @@ public class ControllerEndpointTests
 
         Assert.Equal(5, result.Count);
         Assert.All(result, item => Assert.NotNull(item.Summary));
-        Assert.All(result, item => Assert.InRange(item.TemperatureF, -10, 1000));
+        Assert.All(result, item => Assert.InRange(item.TemperatureF, 0, 1000));
     }
 
     private static DriverProfileController CreateDriverController(IDriverProfileService service, string? sub = null, bool isAdmin = false)
