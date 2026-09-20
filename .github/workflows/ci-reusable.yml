@@ -13,6 +13,10 @@ env:
   DOTNET_NOLOGO: "true"
   DOTNET_CLI_TELEMETRY_OPTOUT: "true"
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "true"
+  # The repo root holds more than one solution/project file, so a bare `dotnet build`
+  # (or restore/test/format/list) stops with MSB1011 "specify which project or solution
+  # file to use". Every dotnet command below names this solution explicitly.
+  SOLUTION: GoRide.IdentityAuth.slnx
 
 jobs:
   build-test:
@@ -28,12 +32,12 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore
-        run: dotnet restore
+        run: dotnet restore "$SOLUTION"
 
       - name: Build (Release)
         run: |
           set -o pipefail
-          dotnet build --no-restore -c Release 2>&1 | tee build.log
+          dotnet build "$SOLUTION" --no-restore -c Release 2>&1 | tee build.log
 
       - name: Summarise build warnings
         if: always()
@@ -69,7 +73,7 @@ jobs:
       - name: Test with coverage
         if: steps.detect.outputs.found == 'true'
         run: |
-          dotnet test --no-build -c Release \
+          dotnet test "$SOLUTION" --no-build -c Release \
             --logger "trx;LogFileName=results.trx" \
             --collect:"XPlat Code Coverage" \
             --results-directory ./TestResults
@@ -107,7 +111,7 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore
-        run: dotnet restore
+        run: dotnet restore "$SOLUTION"
 
       # Advisory for now: the existing branches have whitespace violations that
       # would block every PR. Fix them with `dotnet format`, then flip this to
@@ -117,7 +121,7 @@ jobs:
         continue-on-error: true
         run: |
           set -o pipefail
-          dotnet format --verify-no-changes --no-restore 2>&1 | tee format.log
+          dotnet format "$SOLUTION" --verify-no-changes --no-restore 2>&1 | tee format.log
 
       - name: Summarise formatting
         if: always()
@@ -145,7 +149,7 @@ jobs:
       - name: Vulnerable NuGet packages
         run: |
           set -o pipefail
-          dotnet list package --vulnerable --include-transitive 2>&1 | tee vuln.log
+          dotnet list "$SOLUTION" package --vulnerable --include-transitive 2>&1 | tee vuln.log
           if grep -q "has the following vulnerable packages" vuln.log; then
             echo "::error title=Vulnerable dependency::A NuGet package with a known CVE is referenced."
             {
@@ -171,7 +175,7 @@ jobs:
         continue-on-error: true
         run: |
           set -o pipefail
-          dotnet list package --deprecated --include-transitive 2>&1 | tee deprecated.log
+          dotnet list "$SOLUTION" package --deprecated --include-transitive 2>&1 | tee deprecated.log
           if grep -q "has the following deprecated packages" deprecated.log; then
             echo "::warning title=Deprecated dependency::A deprecated NuGet package is referenced."
           fi
