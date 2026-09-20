@@ -304,6 +304,99 @@ public class ControllerEndpointTests
         Assert.IsType<OkResult>(result);
     }
 
+    // ---- DriverController (GET /api/internal-drivers) — called by trip-matching with an API key ----
+
+    private static DriverController CreateInternalDriversController(FakeDriverService service, string? configuredKey, string? sub = null)
+    {
+        var values = new Dictionary<string, string?>();
+        if (configuredKey is not null) values["InternalServices:ApiKey"] = configuredKey;
+
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(
+            new[] { sub is not null ? new Claim("sub", sub) : null }.OfType<Claim>(), sub is not null ? "TestAuth" : null));
+
+        return new DriverController(service, CreateConfiguration(values))
+        {
+            ControllerContext = CreateControllerContext(principal: principal, accessToken: null)
+        };
+    }
+
+    [Fact]
+    public async Task InternalDrivers_WhenApiKeyValidAndNoUser_ReturnsDrivers()
+    {
+        var service = new FakeDriverService { Drivers = { new DriverProfile { DriverId = "d1", VehicleTypeCode = "TUK" } } };
+        var controller = CreateInternalDriversController(service, "super-secret");
+
+        var result = await controller.GetDriversByVehicle(new DriverProfileRequestDto { VehicleType = "TUK" }, "super-secret");
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Single(Assert.IsType<List<DriverProfile>>(ok.Value));
+        Assert.Equal("TUK", service.LastRequest!.VehicleType);
+    }
+
+    [Fact]
+    public void InternalDrivers_IsExemptFromTheGlobalSignedInUserRule()
+    {
+        // Program.cs sets a fallback policy requiring an authenticated user. Without [AllowAnonymous]
+        // here, callers that only have the API key (trip-matching) get a 401 before the action's own
+        // key check runs. This guards against that attribute being removed.
+        var action = typeof(DriverController).GetMethod(nameof(DriverController.GetDriversByVehicle));
+
+        Assert.NotNull(action);
+        Assert.NotNull(System.Reflection.CustomAttributeExtensions.GetCustomAttribute<Microsoft.AspNetCore.Authorization.AllowAnonymousAttribute>(action!));
+    }
+
+    [Fact]
+    public async Task InternalDrivers_WhenApiKeyWrongAndNoUser_ReturnsUnauthorized()
+    {
+        var controller = CreateInternalDriversController(new FakeDriverService(), "super-secret");
+
+        var result = await controller.GetDriversByVehicle(new DriverProfileRequestDto(), "wrong-key");
+
+        Assert.IsType<UnauthorizedResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task InternalDrivers_WhenNoKeySentAndNoUser_ReturnsUnauthorized()
+    {
+        var controller = CreateInternalDriversController(new FakeDriverService(), "super-secret");
+
+        var result = await controller.GetDriversByVehicle(new DriverProfileRequestDto(), null);
+
+        Assert.IsType<UnauthorizedResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task InternalDrivers_WhenNoKeyIsConfigured_AnEmptyHeaderDoesNotGetIn()
+    {
+        // An unset server key must never be satisfied by a missing/empty header.
+        var controller = CreateInternalDriversController(new FakeDriverService(), configuredKey: null);
+
+        var result = await controller.GetDriversByVehicle(new DriverProfileRequestDto(), "");
+
+        Assert.IsType<UnauthorizedResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task InternalDrivers_WhenSignedInUserAndNoKey_StillWorks()
+    {
+        var controller = CreateInternalDriversController(new FakeDriverService(), "super-secret", sub: "user-1");
+
+        var result = await controller.GetDriversByVehicle(new DriverProfileRequestDto(), null);
+
+        Assert.IsType<OkObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task InternalDrivers_WhenThereAreNoDrivers_ReturnsOkWithEmptyList()
+    {
+        var controller = CreateInternalDriversController(new FakeDriverService(), "super-secret");
+
+        var result = await controller.GetDriversByVehicle(new DriverProfileRequestDto { VehicleType = "XL" }, "super-secret");
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);   // "no drivers" is not an error
+        Assert.Empty(Assert.IsType<List<DriverProfile>>(ok.Value));
+    }
+
     private static DriverProfileController CreateDriverController(IDriverProfileService service, string? sub = null, bool isAdmin = false)
     {
         var principal = new ClaimsPrincipal(
@@ -402,6 +495,18 @@ public class ControllerEndpointTests
         LicenseNumber = "LIC-001",
         LicenseExpiry = new DateOnly(2030, 5, 15)
     };
+
+    private sealed class FakeDriverService : IDriverService
+    {
+        public List<DriverProfile> Drivers { get; } = new();
+        public DriverProfileRequestDto? LastRequest { get; private set; }
+
+        public Task<List<DriverProfile>> GetDrivers(DriverProfileRequestDto requestDto)
+        {
+            LastRequest = requestDto;
+            return Task.FromResult(Drivers);
+        }
+    }
 
     private sealed class FakeDriverProfileService : IDriverProfileService
     {

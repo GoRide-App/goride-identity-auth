@@ -2,5 +2,6 @@ namespace SRC.Dtos;
 
 public class DriverProfileRequestDto
 {
-    public string VehicleType {get; set;} = null!;
+    /// <summary>Filter to one vehicle type (e.g. "TUK"); leave empty for drivers of every type.</summary>
+    public string? VehicleType { get; set; }
 }
