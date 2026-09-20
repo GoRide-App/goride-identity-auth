@@ -17,11 +17,13 @@ namespace SRC.Services.Impl
 
         async Task<List<DriverProfile>> IDriverService.GetDrivers(DriverProfileRequestDto requestDto)
         {
-            var drivers = await _context.DriverProfile.Where(d => d.VehicleTypeCode == requestDto.VehicleType).ToListAsync();
+            var query = _context.DriverProfile.AsQueryable();
 
-            // if(drivers is null) throw new Exception("There are no drivers with the selected vehicle type!!");
+            // No vehicle type means "drivers of every type".
+            if (!string.IsNullOrWhiteSpace(requestDto.VehicleType))
+                query = query.Where(d => d.VehicleTypeCode == requestDto.VehicleType);
 
-            return drivers;
+            return await query.ToListAsync();
         }
     }
 }
