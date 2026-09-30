@@ -188,6 +188,7 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 
 app.UseForwardedHeaders();
+app.UseRouting();
 app.UseCors("frontend");
 app.UseAuthentication();
 app.UseAuthorization();

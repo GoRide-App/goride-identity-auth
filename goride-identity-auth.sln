@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.002.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GoRide.IdentityAuth", "src\GoRide.IdentityAuth.csproj", "{D4F06A5F-2C1F-4D59-82DA-58145AAFE12D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{03B5878C-9B74-4ACD-AAFC-7AC9C2D5B9A7}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GoRide.IdentityAuth.Tests", "tests\GoRide.IdentityAuth.Tests\GoRide.IdentityAuth.Tests.csproj", "{4A83AF1B-6F0C-4D2C-95AE-7E31139B4D6D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D4F06A5F-2C1F-4D59-82DA-58145AAFE12D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D4F06A5F-2C1F-4D59-82DA-58145AAFE12D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D4F06A5F-2C1F-4D59-82DA-58145AAFE12D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D4F06A5F-2C1F-4D59-82DA-58145AAFE12D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4A83AF1B-6F0C-4D2C-95AE-7E31139B4D6D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4A83AF1B-6F0C-4D2C-95AE-7E31139B4D6D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4A83AF1B-6F0C-4D2C-95AE-7E31139B4D6D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4A83AF1B-6F0C-4D2C-95AE-7E31139B4D6D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{4A83AF1B-6F0C-4D2C-95AE-7E31139B4D6D} = {03B5878C-9B74-4ACD-AAFC-7AC9C2D5B9A7}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B3633D90-261D-4FB5-A969-ECFC0EC98602}
+	EndGlobalSection
+EndGlobal
