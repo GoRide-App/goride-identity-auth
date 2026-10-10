@@ -4,12 +4,20 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SRC.Services.Impl;
 
 namespace SRC.Controllers
 {
     [ApiController]
-    public class LoginController: ControllerBase
+    public class LoginController : ControllerBase
     {
+        private readonly FrontendUrlResolver _frontendUrlResolver;
+
+        public LoginController(FrontendUrlResolver frontendUrlResolver)
+        {
+            _frontendUrlResolver = frontendUrlResolver;
+        }
+
         [HttpGet("/api/me")]
         public ActionResult GetScope()
         {
@@ -30,7 +38,7 @@ namespace SRC.Controllers
         [AllowAnonymous]
         public ActionResult Login(string? returnUrl, string? prompt)
         {
-            var properties = new AuthenticationProperties { RedirectUri = returnUrl ?? "https://goride-my-client.vercel.app" };
+            var properties = _frontendUrlResolver.CreateProperties(Request, returnUrl);
             if (prompt == "login")
             {
                 properties.Items["forceFresh"] = "true";

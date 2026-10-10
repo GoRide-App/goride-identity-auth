@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using SRC;
 using SRC.Data;
+using SRC.Services.Impl;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,7 +21,8 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 });
 
 // Add services to the container.
-
+builder.Services.AddScoped<FrontendUrlResolver>();
+builder.Services.AddScoped<FrontendOpenIdConnectEvents>();
 
 builder.Services.AddAuthentication(options =>
 {
@@ -123,22 +125,7 @@ builder.Services.AddAuthentication(options =>
     options.TokenValidationParameters.NameClaimType = "name";
     options.TokenValidationParameters.RoleClaimType = "roles"; // Asgardeo's claim name — without this, [Authorize(Roles=...)] never matches
 
-    options.Events.OnRedirectToIdentityProvider = context =>
-    {
-        context.ProtocolMessage.RedirectUri = $"{builder.Configuration["Frontend:BaseUrl"]}/signin-oidc";
-
-        if (context.Properties.Items.TryGetValue("forceFresh", out var forceFresh) && forceFresh == "true")
-        {
-            context.ProtocolMessage.Prompt = "login";
-        }
-        return Task.CompletedTask;
-    };
-
-    options.Events.OnRedirectToIdentityProviderForSignOut = context =>
-    {
-        context.ProtocolMessage.PostLogoutRedirectUri = $"{builder.Configuration["Frontend:BaseUrl"]}/signout-callback-oidc";
-        return Task.CompletedTask;
-    };
+    options.EventsType = typeof(FrontendOpenIdConnectEvents);
 });
 
 builder.Services.AddAuthorization(options =>
@@ -187,6 +174,13 @@ var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 
+// Resolve and cache the frontend before ForwardedHeadersMiddleware consumes
+// X-Forwarded-Proto. Both forwarded headers must come from the same proxy hop.
+app.Use((context, next) =>
+{
+    context.RequestServices.GetRequiredService<FrontendUrlResolver>().Resolve(context.Request);
+    return next(context);
+});
 app.UseForwardedHeaders();
 app.UseRouting();
 app.UseCors("frontend");
@@ -201,9 +195,9 @@ if (app.Environment.IsDevelopment())
 app.MapGet("/api/admin-check", () => Results.Ok(new { message = "You're an admin" }))
    .RequireAuthorization(policy => policy.RequireRole("Admin"));
 
-app.MapGet("/logout", () =>
+app.MapGet("/logout", (HttpContext context, FrontendUrlResolver frontendUrlResolver) =>
         Results.SignOut(
-            new AuthenticationProperties { RedirectUri = builder.Configuration["Frontend:BaseUrl"] },
+            frontendUrlResolver.CreateProperties(context.Request),
             [CookieAuthenticationDefaults.AuthenticationScheme, OpenIdConnectDefaults.AuthenticationScheme]
 ));
 

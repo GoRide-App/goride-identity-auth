@@ -2,6 +2,44 @@ GoRide
 
 GoRide
 
+## Multiple frontend deployments
+
+`Frontend:BaseUrl` remains the primary frontend and fallback when no allowed
+frontend can be identified. Add other frontend origins through the
+`Frontend:AllowedBaseUrls` array. For the shared identity service, set these
+environment variables:
+
+```text
+Frontend__BaseUrl=https://goride-my-client.vercel.app
+Frontend__AllowedBaseUrls__0=https://goride-demo.vercel.app
+Frontend__AllowedBaseUrls__1=http://localhost:3000
+```
+
+The effective redirect allow-list includes the primary URL and every array
+entry, normalized to scheme, host and port with no trailing slash. Host names
+are case-insensitive; schemes and non-default ports must match. `AllowedOrigins`
+continues to control CORS separately and does not authorize authentication redirects.
+
+Each frontend must proxy `/login`, `/logout`, `/signin-oidc`,
+`/signout-callback-oidc` and `/api/*` to this service on the same origin. Its
+proxy must set `X-Forwarded-Host` and `X-Forwarded-Proto` to the frontend host
+and scheme. The service checks the first comma-separated value in each of
+those headers, then `Origin`, then the origin of `Referer`, taking the first
+allow-listed match or falling back to `Frontend:BaseUrl`. It preserves this
+choice through OIDC state for login and logout. A login `returnUrl` can be
+relative or an absolute URL on an allowed frontend; other values are ignored.
+
+In the Asgardeo application, register **both** authorized redirect URLs for
+**every** frontend: `https://<host>/signin-oidc` and
+`https://<host>/signout-callback-oidc`. For the configuration above these are:
+
+- `https://goride-my-client.vercel.app/signin-oidc`
+- `https://goride-my-client.vercel.app/signout-callback-oidc`
+- `https://goride-demo.vercel.app/signin-oidc`
+- `https://goride-demo.vercel.app/signout-callback-oidc`
+- `http://localhost:3000/signin-oidc` (local development)
+- `http://localhost:3000/signout-callback-oidc` (local development)
+
 ## Local Development Setup (Frontend + Backend, Azure DB)
 
 This walks a new developer through running `goride-identity-auth` (this repo) and
