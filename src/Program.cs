@@ -158,6 +158,19 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddControllers();
 
+
+builder.Services.AddEndpointsApiExplorer(); // only needed if you use minimal APIs; harmless either way
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new Microsoft.OpenApi.OpenApiInfo
+    {
+        Title = "GoRide Trip Matching API",
+        Version = "v1"
+    });
+});
+
+
+
 // var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 var connectionString = builder.Configuration["ConnectionStrings:DefaultConnection"];
 var serverVersion = ServerVersion.AutoDetect(connectionString);
@@ -181,6 +194,16 @@ app.Use((context, next) =>
     context.RequestServices.GetRequiredService<FrontendUrlResolver>().Resolve(context.Request);
     return next(context);
 });
+
+app.UseForwardedHeaders();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+    app.MapOpenApi().AllowAnonymous();
+}
+
 app.UseForwardedHeaders();
 app.UseRouting();
 app.UseCors("frontend");
